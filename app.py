@@ -4,21 +4,13 @@
 
 import hashlib
 from flask import Flask, render_template, request, redirect, url_for, session
-from api import creer_utilisateur, connecter_utilisateur, get_utilisateur, crediter_solde
+from api import creer_utilisateur, connecter_utilisateur, get_utilisateur, crediter_solde, get_transactions
 
 app = Flask(__name__)
 app.secret_key = "adreward-secret-key-changer-en-production"
 
 # ============================================================
 # CONFIGURATION GÉNÉRALE
-#
-# CPX_APP_ID       : identifiant de ton app chez CPX Research
-# CPX_SECRET       : clé secrète pour vérifier les postbacks
-# TAUX_FCFA        : 1 USD = 563 FCFA
-# PART_UTILISATEUR : l'utilisateur reçoit 35% du gain brut
-#
-# Pour modifier le pourcentage ou le taux, change juste
-# ces deux lignes — tout le reste s'adapte automatiquement.
 # ============================================================
 CPX_APP_ID       = "32995"
 CPX_SECRET       = "SJOAjIyqrNKd8VsJBhNg4EcTTy23C9pi"
@@ -116,41 +108,38 @@ def offres():
     return render_template("offres.html", utilisateur=utilisateur, cpx_url=cpx_url)
 
 
-# ============================================================
-# ROUTE : Postback CPX Research
-#
-# C'est l'URL que CPX Research appelle automatiquement
-# quand un utilisateur termine une offre.
-# CPX envoie ces paramètres dans l'URL :
-#
-#   ext_user_id    : l'ID de l'utilisateur qui a complété l'offre
-#   amount_usd     : le montant gagné en USD (ex: "0.5")
-#   transaction_id : identifiant unique de cette offre
-#   hash           : signature de sécurité pour vérifier
-#                    que c'est bien CPX qui envoie (pas un pirate)
-#
-# Exemple d'URL reçue :
-# /postback/cpx?ext_user_id=abc123&amount_usd=0.5
-#              &transaction_id=TX999&hash=xxxx
-# ============================================================
+@app.route("/historique")
+def historique():
+    # ============================================================
+    # Page qui affiche les dernières transactions de l'utilisateur.
+    # On récupère ses 50 dernières transactions depuis Supabase
+    # et on les passe au template pour les afficher.
+    # ============================================================
+    if "utilisateur_id" not in session:
+        return redirect(url_for("connexion"))
+
+    utilisateur = get_utilisateur(session["utilisateur_id"])
+    if not utilisateur:
+        session.clear()
+        return redirect(url_for("connexion"))
+
+    transactions = get_transactions(session["utilisateur_id"])
+
+    return render_template(
+        "historique.html",
+        utilisateur=utilisateur,
+        transactions=transactions
+    )
+
+
 @app.route("/postback/cpx")
 def postback_cpx():
-
-    # On récupère tous les paramètres envoyés par CPX
     ext_user_id    = request.args.get("ext_user_id", "")
     amount_usd     = request.args.get("amount_usd", "0")
     transaction_id = request.args.get("transaction_id", "")
     hash_recu      = request.args.get("hash", "")
 
-    # --------------------------------------------------------
-    # ÉTAPE 1 : Vérification de la signature (sécurité)
-    #
-    # CPX calcule une signature MD5 avec :
-    #   transaction_id + "-" + CPX_SECRET
-    # On fait le même calcul de notre côté et on compare.
-    # Si ça ne correspond pas → on rejette avec une erreur 403.
-    # Ça empêche n'importe qui de créditer des faux gains.
-    # --------------------------------------------------------
+    # Vérification de la signature
     hash_attendu = hashlib.md5(
         f"{transaction_id}-{CPX_SECRET}".encode()
     ).hexdigest()
@@ -159,27 +148,17 @@ def postback_cpx():
         print(f"❌ Postback rejeté : signature invalide. Reçu={hash_recu} Attendu={hash_attendu}")
         return "Invalid hash", 403
 
-    # --------------------------------------------------------
-    # ÉTAPE 2 : Calcul du montant en FCFA
-    #
-    # CPX envoie le montant en USD (ex: "0.5")
-    # On convertit : 0.5 USD × 563 = 281.5 FCFA
-    # On applique la part utilisateur : 281.5 × 35% = 98 FCFA
-    # On arrondit à l'entier inférieur (int())
-    # --------------------------------------------------------
+    # Calcul du montant en FCFA
     try:
         montant_usd   = float(amount_usd)
         montant_fcfa  = int(montant_usd * TAUX_FCFA * PART_UTILISATEUR)
     except ValueError:
         return "Invalid amount", 400
 
-    # Si le montant calculé est 0, rien à créditer
     if montant_fcfa <= 0:
         return "OK", 200
 
-    # --------------------------------------------------------
-    # ÉTAPE 3 : Créditer le solde de l'utilisateur
-    # --------------------------------------------------------
+    # Créditer le solde
     succes = crediter_solde(
         utilisateur_id=ext_user_id,
         montant_fcfa=montant_fcfa,
@@ -188,8 +167,6 @@ def postback_cpx():
     )
 
     if succes:
-        # CPX attend la réponse "1" pour confirmer que le postback
-        # a bien été reçu et traité. Sans ça, CPX réessaiera.
         return "1", 200
     else:
         return "Error", 500

@@ -1,0 +1,121 @@
+<!--
+    historique.html — Historique des gains de l'utilisateur
+    Affiche les 50 dernières transactions triées par date décroissante.
+-->
+{% extends "base.html" %}
+
+{% block titre %}Historique — AdReward{% endblock %}
+
+{% block contenu %}
+<div class="container">
+
+    <!-- En-tête avec solde -->
+    <div class="card" style="margin-bottom: 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <a href="/tableau-de-bord" style="color:#FF8000; text-decoration:none; font-weight:bold;">
+                ← Retour
+            </a>
+            <span style="font-weight:bold; color:#FF8000;">
+                💰 {{ utilisateur.solde }} FCFA
+            </span>
+        </div>
+        <h1 style="margin-bottom:0;">📋 Historique</h1>
+    </div>
+
+    <!-- Liste des transactions -->
+    <div class="card">
+
+        {% if transactions %}
+
+            <!-- Résumé rapide -->
+            <div style="background:#fff8f0; border-radius:8px; padding:12px; margin-bottom:20px; text-align:center;">
+                <div style="font-size:12px; color:#888; margin-bottom:4px;">TOTAL GAGNÉ</div>
+                <div style="font-size:28px; font-weight:bold; color:#FF8000;">
+                    <!--
+                        On calcule le total côté template Jinja2.
+                        "namespace" permet de modifier une variable
+                        à l'intérieur d'une boucle for (limitation Jinja2).
+                    -->
+                    {% set ns = namespace(total=0) %}
+                    {% for t in transactions %}
+                        {% set ns.total = ns.total + t.montant_fcfa %}
+                    {% endfor %}
+                    {{ ns.total }} FCFA
+                </div>
+                <div style="font-size:12px; color:#aaa; margin-top:4px;">
+                    {{ transactions|length }} offre{{ 's' if transactions|length > 1 else '' }} complétée{{ 's' if transactions|length > 1 else '' }}
+                </div>
+            </div>
+
+            <!-- Tableau des transactions -->
+            {% for t in transactions %}
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:12px 0;
+                border-bottom:1px solid #f0f0f0;
+            ">
+                <!-- Icône + source + date -->
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="
+                        width:38px; height:38px;
+                        background:#fff8f0;
+                        border-radius:50%;
+                        display:flex; align-items:center; justify-content:center;
+                        font-size:18px;
+                        flex-shrink:0;
+                    ">
+                        {% if t.source == "cpx" %}📺
+                        {% elif t.source == "lootably" %}🎮
+                        {% else %}⭐{% endif %}
+                    </div>
+                    <div>
+                        <div style="font-weight:bold; font-size:14px; color:#333;">
+                            {% if t.source == "cpx" %}CPX Research
+                            {% elif t.source == "lootably" %}Lootably
+                            {% else %}Offre complétée{% endif %}
+                        </div>
+                        <div style="font-size:11px; color:#aaa; margin-top:2px;">
+                            <!--
+                                created_at vient de Supabase au format ISO 8601
+                                ex: "2025-01-15T14:32:00.123456+00:00"
+                                On affiche seulement les 10 premiers caractères
+                                pour avoir "2025-01-15" (la date seulement).
+                            -->
+                            {{ t.created_at[:10] if t.created_at else "—" }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Montant -->
+                <div style="font-weight:bold; color:#28a745; font-size:16px; white-space:nowrap;">
+                    +{{ t.montant_fcfa }} FCFA
+                </div>
+            </div>
+            {% endfor %}
+
+        {% else %}
+            <!-- Aucune transaction encore -->
+            <div style="text-align:center; padding:40px 20px; color:#aaa;">
+                <div style="font-size:48px; margin-bottom:15px;">📭</div>
+                <div style="font-size:16px; font-weight:bold; color:#666; margin-bottom:8px;">
+                    Pas encore de gains
+                </div>
+                <div style="font-size:14px; margin-bottom:20px;">
+                    Complète ta première offre pour voir ton historique ici.
+                </div>
+                <a href="/offres" class="btn" style="
+                    display:inline-block;
+                    width:auto;
+                    padding:10px 25px;
+                    text-decoration:none;
+                ">
+                    📺 Voir les offres
+                </a>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

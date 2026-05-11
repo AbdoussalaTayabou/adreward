@@ -68,18 +68,6 @@ def transaction_existe(transaction_id):
 def crediter_solde(utilisateur_id, montant_fcfa, transaction_id, source="cpx"):
     # ============================================================
     # Crédite le solde d'un utilisateur après une offre complétée.
-    #
-    # Paramètres :
-    #   utilisateur_id  : l'ID de l'utilisateur à créditer
-    #   montant_fcfa    : le montant EN FCFA à ajouter (déjà calculé)
-    #   transaction_id  : identifiant unique de l'offre chez CPX
-    #   source          : "cpx" ou "lootably" (pour l'historique)
-    #
-    # Étapes :
-    #   1. Vérifie que cette transaction n'a pas déjà été traitée
-    #   2. Récupère le solde actuel de l'utilisateur
-    #   3. Ajoute le montant au solde
-    #   4. Enregistre la transaction dans l'historique
     # ============================================================
 
     # Étape 1 : anti-doublon
@@ -97,16 +85,13 @@ def crediter_solde(utilisateur_id, montant_fcfa, transaction_id, source="cpx"):
         solde_actuel = utilisateur["solde"]
         nouveau_solde = solde_actuel + montant_fcfa
 
-        # Étape 3 : met à jour le solde dans la table utilisateurs
-        # .update({...}) modifie les colonnes indiquées
-        # .eq("id", utilisateur_id) cible uniquement cet utilisateur
+        # Étape 3 : met à jour le solde
         supabase.table("utilisateurs") \
             .update({"solde": nouveau_solde}) \
             .eq("id", utilisateur_id) \
             .execute()
 
-        # Étape 4 : enregistre la transaction dans l'historique
-        # pour qu'on ne la traite jamais deux fois (anti-doublon)
+        # Étape 4 : enregistre la transaction
         supabase.table("transactions").insert({
             "utilisateur_id": utilisateur_id,
             "transaction_id": transaction_id,
@@ -120,3 +105,37 @@ def crediter_solde(utilisateur_id, montant_fcfa, transaction_id, source="cpx"):
     except Exception as e:
         print(f"Erreur crediter_solde: {e}")
         return False
+
+
+def get_transactions(utilisateur_id, limite=50):
+    # ============================================================
+    # Récupère les dernières transactions d'un utilisateur.
+    #
+    # Paramètres :
+    #   utilisateur_id : l'ID de l'utilisateur
+    #   limite         : nombre max de transactions à retourner
+    #                    (par défaut 50, les plus récentes d'abord)
+    #
+    # Retourne une liste de dicts, ex :
+    # [
+    #   {
+    #     "id": 1,
+    #     "montant_fcfa": 98,
+    #     "source": "cpx",
+    #     "transaction_id": "TX999",
+    #     "created_at": "2025-01-15T14:32:00"
+    #   },
+    #   ...
+    # ]
+    # ============================================================
+    try:
+        resultat = supabase.table("transactions") \
+            .select("id, montant_fcfa, source, transaction_id, created_at") \
+            .eq("utilisateur_id", utilisateur_id) \
+            .order("created_at", desc=True) \
+            .limit(limite) \
+            .execute()
+        return resultat.data if resultat.data else []
+    except Exception as e:
+        print(f"Erreur get_transactions: {e}")
+        return []
