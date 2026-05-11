@@ -1,0 +1,52 @@
+<!--
+    inscription.html — Page d'inscription
+    "extends" signifie qu'on hérite du squelette base.html.
+    On remplit uniquement les zones "block" définies dans base.html.
+-->
+{% extends "base.html" %}
+
+{% block titre %}Inscription — AdReward{% endblock %}
+
+{% block contenu %}
+<div class="container">
+    <div class="card">
+        <h1>Créer un compte</h1>
+
+        <!-- Si une erreur existe, on l'affiche -->
+        {% if erreur %}
+        <div class="erreur">{{ erreur }}</div>
+        {% endif %}
+
+        <!--
+            method="POST" : les données sont envoyées à Flask en POST
+            action="/inscription" : Flask traitera ce formulaire dans
+            la route @app.route("/inscription")
+        -->
+        <form method="POST" action="/inscription">
+            <input
+                type="text"
+                name="nom"
+                placeholder="Ton nom complet"
+                required
+            >
+            <input
+                type="email"
+                name="email"
+                placeholder="Ton adresse email"
+                required
+            >
+            <input
+                type="password"
+                name="mot_de_passe"
+                placeholder="Mot de passe (6 caractères min.)"
+                required
+            >
+            <button type="submit" class="btn">S'inscrire</button>
+        </form>
+
+        <div class="lien-secondaire">
+            Déjà un compte ? <a href="/connexion">Se connecter</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

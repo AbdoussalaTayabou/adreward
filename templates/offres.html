@@ -1,0 +1,48 @@
+<!--
+    offres.html — Page des offres CPX Research
+    Cette page affiche les publicités et sondages disponibles
+    via une iframe qui pointe vers CPX Research.
+-->
+{% extends "base.html" %}
+
+{% block titre %}Offres — AdReward{% endblock %}
+
+{% block contenu %}
+<div style="max-width:480px; margin:0 auto;">
+
+    <!-- Barre du haut avec solde et retour -->
+    <div style="background:white; padding:12px 15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee;">
+        <a href="/tableau-de-bord" style="color:#FF8000; text-decoration:none; font-weight:bold;">
+            ← Retour
+        </a>
+        <span style="font-weight:bold; color:#FF8000;">
+            💰 {{ utilisateur.solde }} FCFA
+        </span>
+    </div>
+
+    <!-- Message d'explication -->
+    <div style="background:#fff8f0; padding:12px 15px; font-size:13px; color:#666; border-bottom:1px solid #eee;">
+        📺 Complète une offre ci-dessous pour gagner des FCFA. Ton solde se met à jour automatiquement.
+    </div>
+
+    <!--
+        L'iframe affiche le contenu de CPX Research directement
+        dans notre page. L'utilisateur reste sur notre app
+        mais voit les offres de CPX.
+
+        cpx_url est construite dans app.py avec les infos
+        de l'utilisateur connecté.
+    -->
+    <iframe
+        src="{{ cpx_url }}"
+        style="width:100%; height:80vh; border:none; display:block;"
+        allow="camera; microphone"
+    ></iframe>
+    <!--
+        allow="camera; microphone" : certains sondages CPX
+        demandent accès à la caméra ou au micro.
+        On l'autorise ici pour ne pas bloquer ces offres.
+    -->
+
+</div>
+{% endblock %}

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+    base.html — Le squelette commun à toutes les pages
+    Toutes les autres pages HTML "héritent" de ce fichier.
+    Ça évite de répéter le même code HTML sur chaque page.
+    Le mot-clé Jinja2 "block" définit les zones que les
+    pages enfants peuvent remplir avec leur propre contenu.
+-->
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- "block titre" sera remplacé par le titre de chaque page -->
+    <title>{% block titre %}AdReward{% endblock %}</title>
+    <style>
+        /* Style global de l'application — sobre et mobile-friendly */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* Barre de navigation en haut */
+        nav {
+            background: #FF8000;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        nav a { color: white; text-decoration: none; font-weight: bold; }
+
+        /* Conteneur principal centré */
+        .container {
+            max-width: 480px;
+            margin: 30px auto;
+            padding: 0 15px;
+        }
+
+        /* Carte blanche pour les formulaires */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h1 { font-size: 22px; margin-bottom: 20px; color: #FF8000; }
+
+        /* Champs de formulaire */
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        /* Bouton principal */
+        .btn {
+            width: 100%;
+            padding: 13px;
+            background: #FF8000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:hover { background: #e67300; }
+
+        /* Message d'erreur */
+        .erreur {
+            background: #ffe0e0;
+            color: #cc0000;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        /* Lien secondaire sous les formulaires */
+        .lien-secondaire {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+        .lien-secondaire a { color: #FF8000; }
+    </style>
+</head>
+<body>
+
+    <!-- La navigation n'apparaît que si l'utilisateur est connecté -->
+    {% if session.get('utilisateur_id') %}
+    <nav>
+        <span>💰 AdReward</span>
+        <a href="/deconnexion">Déconnexion</a>
+    </nav>
+    {% endif %}
+
+    <!-- "block contenu" sera remplacé par le contenu de chaque page -->
+    {% block contenu %}{% endblock %}
+
+</body>
+</html>

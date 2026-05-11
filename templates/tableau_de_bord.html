@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block titre %}Tableau de bord — AdReward{% endblock %}
+
+{% block contenu %}
+<div class="container">
+
+    <div class="card" style="margin-bottom: 15px;">
+        <h1>Bonjour, {{ utilisateur.nom }} 👋</h1>
+        <p style="color:#666; margin-bottom:20px;">
+            Regarde des publicités et gagne de l'argent !
+        </p>
+
+        <div style="background:#fff8f0; border-radius:10px; padding:20px; text-align:center;">
+            <div style="font-size:13px; color:#888; margin-bottom:5px;">TON SOLDE</div>
+            <div style="font-size:40px; font-weight:bold; color:#FF8000;">
+                {{ utilisateur.solde }} FCFA
+            </div>
+            <div style="font-size:12px; color:#aaa; margin-top:5px;">
+                Minimum de retrait : 500 FCFA
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <!-- Bouton offres — maintenant lié à la vraie page /offres -->
+        <a href="/offres" class="btn" style="display:block; text-align:center; margin-bottom:12px; text-decoration:none;">
+            📺 Voir les offres
+        </a>
+
+        {% if utilisateur.solde >= 500 %}
+        <a href="#" class="btn" style="display:block; text-align:center; text-decoration:none; background:#28a745;">
+            💸 Demander un retrait
+        </a>
+        {% else %}
+        <a href="#" class="btn" style="display:block; text-align:center; text-decoration:none; background:#aaa; cursor:not-allowed;">
+            💸 Demander un retrait
+        </a>
+        <p style="text-align:center; font-size:12px; color:#aaa; margin-top:8px;">
+            Il te manque {{ 500 - utilisateur.solde }} FCFA pour retirer.
+        </p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
