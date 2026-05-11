@@ -2,6 +2,7 @@
 # app.py — Fichier principal
 # ============================================================
 
+import os
 import hashlib
 from flask import Flask, render_template, request, redirect, url_for, session
 from api import (
@@ -12,15 +13,15 @@ from api import (
 )
 
 app = Flask(__name__)
-app.secret_key = "adreward-secret-key-changer-en-production"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "adreward-secret-key-changer-en-production")
 
-CPX_APP_ID       = "32995"
-CPX_SECRET       = "SJOAjIyqrNKd8VsJBhNg4EcTTy23C9pi"
-TAUX_FCFA        = 563
+CPX_APP_ID       = os.environ.get("CPX_APP_ID", "32995")
+CPX_SECRET       = os.environ.get("CPX_SECRET", "SJOAjIyqrNKd8VsJBhNg4EcTTy23C9pi")
+TAUX_FCFA        = int(os.environ.get("TAUX_CPX_FCFA", "563"))
 PART_UTILISATEUR = 0.35
 
-# Opérateurs Mobile Money disponibles
 OPERATEURS = ["Orange Money", "Moov Money", "Airtel Money"]
+ADMIN_MOT_DE_PASSE = os.environ.get("ADMIN_MOT_DE_PASSE", "AdReward@Admin2025")
 
 
 @app.route("/")
@@ -129,18 +130,6 @@ def historique():
 
 @app.route("/retrait", methods=["GET", "POST"])
 def retrait():
-    # ============================================================
-    # Page de demande de retrait.
-    #
-    # GET  → affiche le formulaire + l'historique des retraits
-    # POST → traite la demande :
-    #   1. Valide les champs du formulaire
-    #   2. Appelle creer_retrait() qui déduit le solde
-    #      et enregistre la demande
-    #   3. Redirige vers le tableau de bord avec un message
-    #      de confirmation, ou réaffiche le formulaire avec
-    #      un message d'erreur
-    # ============================================================
     if "utilisateur_id" not in session:
         return redirect(url_for("connexion"))
 
@@ -157,7 +146,6 @@ def retrait():
         numero_telephone = request.form.get("numero_telephone", "").strip()
         montant_str      = request.form.get("montant", "").strip()
 
-        # Validation des champs
         if not operateur or not numero_telephone or not montant_str:
             erreur = "Tous les champs sont obligatoires."
         elif operateur not in OPERATEURS:
@@ -179,14 +167,11 @@ def retrait():
                     numero_telephone=numero_telephone
                 )
                 if resultat:
-                    # Succès : on recharge l'utilisateur pour avoir le nouveau solde
-                    # puis on redirige vers le tableau de bord
                     session["retrait_succes"] = f"Demande de retrait de {montant_fcfa} FCFA envoyée avec succès !"
                     return redirect(url_for("tableau_de_bord"))
                 else:
                     erreur = message_erreur
 
-        # Si erreur, on recharge l'utilisateur (son solde n'a pas changé)
         utilisateur = get_utilisateur(session["utilisateur_id"])
 
     retraits = get_retraits(session["utilisateur_id"])
@@ -233,30 +218,13 @@ def postback_cpx():
 
     return ("1", 200) if succes else ("Error", 500)
 
+
 # ============================================================
-# ROUTES ADMIN — À ajouter à la fin de app.py
-# (avant le bloc if __name__ == "__main__")
+# ROUTES ADMIN
 # ============================================================
-
-# Importer les fonctions admin dans le bloc d'import existant :
-# from api import (..., admin_get_retraits_en_attente,
-#                  admin_valider_retrait, admin_refuser_retrait,
-#                  admin_get_stats, admin_get_tous_retraits)
-
-# Mot de passe admin — change cette valeur avant de déployer !
-ADMIN_MOT_DE_PASSE = "AdReward@Admin2025"
-
-# URL secrète d'accès à l'admin (ne la partage pas)
-# Accessible via : https://ton-app.onrender.com/gestion-ar-admin
-
 
 @app.route("/gestion-ar-admin", methods=["GET", "POST"])
 def admin_connexion():
-    # ============================================================
-    # Page de connexion admin.
-    # Vérifie le mot de passe et ouvre une session admin séparée
-    # de la session utilisateur classique.
-    # ============================================================
     if session.get("admin_connecte"):
         return redirect(url_for("admin_dashboard"))
 
@@ -274,10 +242,6 @@ def admin_connexion():
 
 @app.route("/gestion-ar-admin/dashboard")
 def admin_dashboard():
-    # ============================================================
-    # Dashboard principal admin.
-    # Affiche les stats et les retraits en attente.
-    # ============================================================
     if not session.get("admin_connecte"):
         return redirect(url_for("admin_connexion"))
 
@@ -295,26 +259,16 @@ def admin_dashboard():
 
 @app.route("/gestion-ar-admin/valider/<retrait_id>", methods=["POST"])
 def admin_valider(retrait_id):
-    # ============================================================
-    # Valide un retrait (passe son statut à "validé").
-    # L'argent a déjà été déduit du solde lors de la demande,
-    # donc on ne touche pas au solde ici.
-    # ============================================================
     if not session.get("admin_connecte"):
         return redirect(url_for("admin_connexion"))
-
     admin_valider_retrait(retrait_id)
     return redirect(url_for("admin_dashboard"))
 
 
 @app.route("/gestion-ar-admin/refuser/<retrait_id>", methods=["POST"])
 def admin_refuser(retrait_id):
-    # ============================================================
-    # Refuse un retrait ET rembourse l'utilisateur.
-    # ============================================================
     if not session.get("admin_connecte"):
         return redirect(url_for("admin_connexion"))
-
     admin_refuser_retrait(retrait_id)
     return redirect(url_for("admin_dashboard"))
 
@@ -324,5 +278,7 @@ def admin_deconnexion():
     session.pop("admin_connecte", None)
     return redirect(url_for("admin_connexion"))
 
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
