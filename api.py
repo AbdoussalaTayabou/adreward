@@ -190,3 +190,131 @@ def get_retraits(utilisateur_id, limite=20):
     except Exception as e:
         print(f"Erreur get_retraits: {e}")
         return []
+    
+# ============================================================
+# FONCTIONS ADMIN — À ajouter à la fin de api.py
+# ============================================================
+
+def admin_get_retraits_en_attente():
+    """Récupère tous les retraits en attente avec les infos utilisateur."""
+    try:
+        resultat = supabase.table("retraits") \
+            .select("id, montant_fcfa, operateur, numero_telephone, statut, created_at, utilisateur_id") \
+            .eq("statut", "en_attente") \
+            .order("created_at", desc=False) \
+            .execute()
+        # On enrichit chaque retrait avec le nom et l'email de l'utilisateur
+        retraits = resultat.data if resultat.data else []
+        for r in retraits:
+            utilisateur = get_utilisateur(r["utilisateur_id"])
+            r["utilisateur_nom"]   = utilisateur["nom"]   if utilisateur else "—"
+            r["utilisateur_email"] = utilisateur["email"] if utilisateur else "—"
+        return retraits
+    except Exception as e:
+        print(f"Erreur admin_get_retraits_en_attente: {e}")
+        return []
+
+
+def admin_valider_retrait(retrait_id):
+    """Passe le statut d'un retrait à 'validé'."""
+    try:
+        supabase.table("retraits") \
+            .update({"statut": "validé"}) \
+            .eq("id", retrait_id) \
+            .execute()
+        return True
+    except Exception as e:
+        print(f"Erreur admin_valider_retrait: {e}")
+        return False
+
+
+def admin_refuser_retrait(retrait_id):
+    """
+    Passe le statut d'un retrait à 'refusé' ET
+    rembourse le montant dans le solde de l'utilisateur.
+    """
+    try:
+        # 1. Récupère les infos du retrait
+        resultat = supabase.table("retraits") \
+            .select("utilisateur_id, montant_fcfa") \
+            .eq("id", retrait_id) \
+            .execute()
+        if not resultat.data:
+            return False
+        retrait = resultat.data[0]
+
+        # 2. Rembourse le solde de l'utilisateur
+        utilisateur = get_utilisateur(retrait["utilisateur_id"])
+        if utilisateur:
+            nouveau_solde = utilisateur["solde"] + retrait["montant_fcfa"]
+            supabase.table("utilisateurs") \
+                .update({"solde": nouveau_solde}) \
+                .eq("id", retrait["utilisateur_id"]) \
+                .execute()
+
+        # 3. Met à jour le statut
+        supabase.table("retraits") \
+            .update({"statut": "refusé"}) \
+            .eq("id", retrait_id) \
+            .execute()
+
+        print(f"✅ Retrait {retrait_id} refusé. {retrait['montant_fcfa']} FCFA remboursés.")
+        return True
+    except Exception as e:
+        print(f"Erreur admin_refuser_retrait: {e}")
+        return False
+
+
+def admin_get_stats():
+    """Calcule les statistiques globales pour le dashboard admin."""
+    try:
+        # Nombre d'utilisateurs
+        res_users = supabase.table("utilisateurs").select("id, solde").execute()
+        utilisateurs = res_users.data if res_users.data else []
+        nb_utilisateurs  = len(utilisateurs)
+        total_soldes     = sum(u["solde"] for u in utilisateurs)
+
+        # Transactions
+        res_tx = supabase.table("transactions").select("montant_fcfa").execute()
+        transactions     = res_tx.data if res_tx.data else []
+        nb_transactions  = len(transactions)
+        total_distribue  = sum(t["montant_fcfa"] for t in transactions)
+
+        # Retraits
+        res_ret = supabase.table("retraits").select("montant_fcfa, statut").execute()
+        retraits         = res_ret.data if res_ret.data else []
+        nb_en_attente    = sum(1 for r in retraits if r["statut"] == "en_attente")
+        total_retire     = sum(r["montant_fcfa"] for r in retraits if r["statut"] == "validé")
+        montant_attente  = sum(r["montant_fcfa"] for r in retraits if r["statut"] == "en_attente")
+
+        return {
+            "nb_utilisateurs":  nb_utilisateurs,
+            "total_soldes":     total_soldes,
+            "nb_transactions":  nb_transactions,
+            "total_distribue":  total_distribue,
+            "nb_en_attente":    nb_en_attente,
+            "total_retire":     total_retire,
+            "montant_attente":  montant_attente,
+        }
+    except Exception as e:
+        print(f"Erreur admin_get_stats: {e}")
+        return {}
+
+
+def admin_get_tous_retraits(limite=100):
+    """Récupère tous les retraits (toutes statuts) pour l'historique admin."""
+    try:
+        resultat = supabase.table("retraits") \
+            .select("id, montant_fcfa, operateur, numero_telephone, statut, created_at, utilisateur_id") \
+            .order("created_at", desc=True) \
+            .limit(limite) \
+            .execute()
+        retraits = resultat.data if resultat.data else []
+        for r in retraits:
+            utilisateur = get_utilisateur(r["utilisateur_id"])
+            r["utilisateur_nom"]   = utilisateur["nom"]   if utilisateur else "—"
+            r["utilisateur_email"] = utilisateur["email"] if utilisateur else "—"
+        return retraits
+    except Exception as e:
+        print(f"Erreur admin_get_tous_retraits: {e}")
+        return []

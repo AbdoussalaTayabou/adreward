@@ -1,0 +1,159 @@
+<!--
+    admin_connexion.html — Page de connexion admin
+    Accessible uniquement via l'URL secrète /gestion-ar-admin
+    N'hérite PAS de base.html pour ne pas afficher la nav utilisateur.
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — AdReward</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 360px;
+            padding: 0 20px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-icon {
+            font-size: 36px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .logo-text {
+            font-size: 11px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #FF8000;
+            font-weight: bold;
+        }
+
+        .logo-sub {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #555;
+            margin-top: 4px;
+        }
+
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 4px;
+            padding: 28px 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            background: #111;
+            border: 1px solid #2a2a2a;
+            border-radius: 3px;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="password"]:focus {
+            border-color: #FF8000;
+        }
+
+        .btn {
+            width: 100%;
+            margin-top: 16px;
+            padding: 12px;
+            background: #FF8000;
+            color: #0f0f0f;
+            border: none;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background: #e67300; }
+
+        .erreur {
+            background: #2a0a0a;
+            border: 1px solid #5c1a1a;
+            color: #ff6b6b;
+            padding: 10px 14px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 10px;
+            color: #333;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="logo">
+            <span class="logo-icon">🔐</span>
+            <div class="logo-text">AdReward Admin</div>
+            <div class="logo-sub">Accès restreint</div>
+        </div>
+
+        <div class="card">
+            {% if erreur %}
+            <div class="erreur">⚠ {{ erreur }}</div>
+            {% endif %}
+
+            <form method="POST" action="/gestion-ar-admin">
+                <label for="mot_de_passe">Mot de passe</label>
+                <input
+                    type="password"
+                    id="mot_de_passe"
+                    name="mot_de_passe"
+                    placeholder="••••••••••••"
+                    autofocus
+                    required
+                >
+                <button type="submit" class="btn">→ Entrer</button>
+            </form>
+        </div>
+
+        <div class="footer-note">Ne partage pas cette URL</div>
+    </div>
+</body>
+</html>

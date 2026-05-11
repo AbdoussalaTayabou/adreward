@@ -1,0 +1,475 @@
+<!--
+    admin.html — Dashboard administrateur AdReward
+    N'hérite PAS de base.html — interface admin séparée.
+
+    Sections :
+    1. Barre de navigation admin
+    2. Cartes de statistiques globales
+    3. Retraits en attente (actions valider / refuser)
+    4. Historique complet des retraits
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin — AdReward</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f1117;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        /* ── Navigation ── */
+        nav {
+            background: #1a1d2e;
+            border-bottom: 1px solid #2d3148;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-brand-dot {
+            width: 8px; height: 8px;
+            background: #FF8000;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #FF8000;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.4; }
+        }
+
+        .nav-brand-text {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #FF8000;
+        }
+
+        .nav-brand-sub {
+            font-size: 10px;
+            color: #4a5568;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .nav-logout {
+            font-size: 12px;
+            color: #4a5568;
+            text-decoration: none;
+            padding: 6px 14px;
+            border: 1px solid #2d3148;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .nav-logout:hover {
+            color: #ff6b6b;
+            border-color: #5c1a1a;
+        }
+
+        /* ── Layout ── */
+        .page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 28px 20px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #4a5568;
+            margin-bottom: 14px;
+        }
+
+        /* ── Stat cards ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: #1a1d2e;
+            border: 1px solid #2d3148;
+            border-radius: 8px;
+            padding: 18px 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+        }
+
+        .stat-card.orange::before { background: #FF8000; }
+        .stat-card.green::before  { background: #38a169; }
+        .stat-card.blue::before   { background: #4299e1; }
+        .stat-card.red::before    { background: #e53e3e; }
+        .stat-card.purple::before { background: #805ad5; }
+        .stat-card.yellow::before { background: #d69e2e; }
+
+        .stat-label {
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #e2e8f0;
+            line-height: 1;
+        }
+
+        .stat-unit {
+            font-size: 12px;
+            color: #4a5568;
+            margin-top: 4px;
+        }
+
+        /* ── Sections ── */
+        .section {
+            margin-bottom: 36px;
+        }
+
+        /* ── Retrait card ── */
+        .retrait-card {
+            background: #1a1d2e;
+            border: 1px solid #2d3148;
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .retrait-card.pending {
+            border-left: 3px solid #FF8000;
+        }
+
+        .retrait-info-main {
+            font-size: 15px;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+
+        .retrait-info-sub {
+            font-size: 12px;
+            color: #4a5568;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .retrait-montant {
+            font-size: 22px;
+            font-weight: 700;
+            color: #FF8000;
+            white-space: nowrap;
+            text-align: right;
+        }
+
+        .retrait-montant small {
+            display: block;
+            font-size: 10px;
+            font-weight: 400;
+            color: #4a5568;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* ── Action buttons ── */
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .btn-valider, .btn-refuser {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.15s;
+        }
+
+        .btn-valider {
+            background: #276749;
+            color: #9ae6b4;
+        }
+
+        .btn-valider:hover {
+            background: #2f855a;
+            color: white;
+        }
+
+        .btn-refuser {
+            background: #742a2a;
+            color: #feb2b2;
+        }
+
+        .btn-refuser:hover {
+            background: #9b2c2c;
+            color: white;
+        }
+
+        /* ── Badge statut ── */
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .badge-attente  { background: #744210; color: #fbd38d; }
+        .badge-valide   { background: #1a4731; color: #9ae6b4; }
+        .badge-refuse   { background: #742a2a; color: #feb2b2; }
+
+        /* ── Empty state ── */
+        .empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #4a5568;
+            background: #1a1d2e;
+            border: 1px dashed #2d3148;
+            border-radius: 8px;
+        }
+
+        .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+        .empty-text {
+            font-size: 13px;
+        }
+
+        /* ── Historique ── */
+        .historique-row {
+            background: #1a1d2e;
+            border-bottom: 1px solid #1e2130;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .historique-row:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .historique-row:last-child {
+            border-radius: 0 0 8px 8px;
+            border-bottom: none;
+        }
+
+        .historique-row:only-child {
+            border-radius: 8px;
+        }
+
+        .hist-nom  { font-size: 13px; font-weight: 600; }
+        .hist-meta { font-size: 11px; color: #4a5568; margin-top: 2px; }
+
+        .hist-right {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .hist-montant {
+            font-size: 14px;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav>
+    <div class="nav-brand">
+        <div class="nav-brand-dot"></div>
+        <div>
+            <div class="nav-brand-text">ADREWARD ADMIN</div>
+            <div class="nav-brand-sub">Panneau de gestion</div>
+        </div>
+    </div>
+    <a href="/gestion-ar-admin/deconnexion" class="nav-logout">Déconnexion</a>
+</nav>
+
+<div class="page">
+
+    <!-- ══════════════════════════════
+         1. STATISTIQUES GLOBALES
+    ══════════════════════════════ -->
+    <div class="section">
+        <div class="section-title">Statistiques globales</div>
+        <div class="stats-grid">
+
+            <div class="stat-card orange">
+                <div class="stat-label">Utilisateurs</div>
+                <div class="stat-value">{{ stats.nb_utilisateurs }}</div>
+                <div class="stat-unit">comptes créés</div>
+            </div>
+
+            <div class="stat-card blue">
+                <div class="stat-label">Soldes cumulés</div>
+                <div class="stat-value">{{ stats.total_soldes }}</div>
+                <div class="stat-unit">FCFA en circulation</div>
+            </div>
+
+            <div class="stat-card green">
+                <div class="stat-label">Offres complétées</div>
+                <div class="stat-value">{{ stats.nb_transactions }}</div>
+                <div class="stat-unit">{{ stats.total_distribue }} FCFA distribués</div>
+            </div>
+
+            <div class="stat-card yellow">
+                <div class="stat-label">En attente</div>
+                <div class="stat-value">{{ stats.nb_en_attente }}</div>
+                <div class="stat-unit">{{ stats.montant_attente }} FCFA à envoyer</div>
+            </div>
+
+            <div class="stat-card purple">
+                <div class="stat-label">Total retiré</div>
+                <div class="stat-value">{{ stats.total_retire }}</div>
+                <div class="stat-unit">FCFA validés</div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════
+         2. RETRAITS EN ATTENTE
+    ══════════════════════════════ -->
+    <div class="section">
+        <div class="section-title">
+            Retraits en attente
+            {% if retraits_attente %}
+            — {{ retraits_attente|length }} demande{{ 's' if retraits_attente|length > 1 else '' }}
+            {% endif %}
+        </div>
+
+        {% if retraits_attente %}
+
+            {% for r in retraits_attente %}
+            <div class="retrait-card pending">
+
+                <!-- Infos utilisateur + opérateur -->
+                <div style="flex:1; min-width:180px;">
+                    <div class="retrait-info-main">{{ r.utilisateur_nom }}</div>
+                    <div class="retrait-info-sub">
+                        <span>📧 {{ r.utilisateur_email }}</span>
+                        <span>📱 {{ r.operateur }} {{ r.numero_telephone }}</span>
+                        <span>🗓 {{ r.created_at[:10] if r.created_at else '—' }}</span>
+                    </div>
+                </div>
+
+                <!-- Montant -->
+                <div class="retrait-montant">
+                    {{ r.montant_fcfa }} FCFA
+                    <small>À envoyer</small>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="actions">
+                    <!--
+                        On utilise des formulaires POST pour les actions.
+                        Cela évite qu'un simple rechargement de page
+                        déclenche deux fois l'action.
+                    -->
+                    <form method="POST" action="/gestion-ar-admin/valider/{{ r.id }}"
+                        onsubmit="return confirm('Confirmer le paiement de {{ r.montant_fcfa }} FCFA à {{ r.utilisateur_nom }} ?')">
+                        <button type="submit" class="btn-valider">✓ Validé</button>
+                    </form>
+                    <form method="POST" action="/gestion-ar-admin/refuser/{{ r.id }}"
+                        onsubmit="return confirm('Refuser et rembourser {{ r.utilisateur_nom }} ?')">
+                        <button type="submit" class="btn-refuser">✗ Refuser</button>
+                    </form>
+                </div>
+
+            </div>
+            {% endfor %}
+
+        {% else %}
+            <div class="empty">
+                <div class="empty-icon">✅</div>
+                <div class="empty-text">Aucune demande en attente. Tout est traité !</div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- ══════════════════════════════
+         3. HISTORIQUE COMPLET
+    ══════════════════════════════ -->
+    <div class="section">
+        <div class="section-title">Historique des retraits ({{ tous_retraits|length }} derniers)</div>
+
+        {% if tous_retraits %}
+        <div>
+            {% for r in tous_retraits %}
+            <div class="historique-row">
+                <div>
+                    <div class="hist-nom">{{ r.utilisateur_nom }}</div>
+                    <div class="hist-meta">
+                        {{ r.operateur }} · {{ r.numero_telephone }} · {{ r.created_at[:10] if r.created_at else '—' }}
+                    </div>
+                </div>
+                <div class="hist-right">
+                    <div class="hist-montant">{{ r.montant_fcfa }} FCFA</div>
+                    <span class="badge
+                        {% if r.statut == 'validé' %}badge-valide
+                        {% elif r.statut == 'refusé' %}badge-refuse
+                        {% else %}badge-attente{% endif %}">
+                        {{ r.statut }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+            <div class="empty">
+                <div class="empty-icon">📭</div>
+                <div class="empty-text">Aucun retrait enregistré pour l'instant.</div>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+</body>
+</html>

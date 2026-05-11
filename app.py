@@ -7,7 +7,8 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from api import (
     creer_utilisateur, connecter_utilisateur, get_utilisateur,
     crediter_solde, get_transactions,
-    creer_retrait, get_retraits
+    creer_retrait, get_retraits, admin_get_retraits_en_attente, admin_valider_retrait,
+    admin_refuser_retrait, admin_get_stats, admin_get_tous_retraits
 )
 
 app = Flask(__name__)
@@ -232,6 +233,96 @@ def postback_cpx():
 
     return ("1", 200) if succes else ("Error", 500)
 
+# ============================================================
+# ROUTES ADMIN — À ajouter à la fin de app.py
+# (avant le bloc if __name__ == "__main__")
+# ============================================================
+
+# Importer les fonctions admin dans le bloc d'import existant :
+# from api import (..., admin_get_retraits_en_attente,
+#                  admin_valider_retrait, admin_refuser_retrait,
+#                  admin_get_stats, admin_get_tous_retraits)
+
+# Mot de passe admin — change cette valeur avant de déployer !
+ADMIN_MOT_DE_PASSE = "AdReward@Admin2025"
+
+# URL secrète d'accès à l'admin (ne la partage pas)
+# Accessible via : https://ton-app.onrender.com/gestion-ar-admin
+
+
+@app.route("/gestion-ar-admin", methods=["GET", "POST"])
+def admin_connexion():
+    # ============================================================
+    # Page de connexion admin.
+    # Vérifie le mot de passe et ouvre une session admin séparée
+    # de la session utilisateur classique.
+    # ============================================================
+    if session.get("admin_connecte"):
+        return redirect(url_for("admin_dashboard"))
+
+    erreur = None
+    if request.method == "POST":
+        mdp = request.form.get("mot_de_passe", "")
+        if mdp == ADMIN_MOT_DE_PASSE:
+            session["admin_connecte"] = True
+            return redirect(url_for("admin_dashboard"))
+        else:
+            erreur = "Mot de passe incorrect."
+
+    return render_template("admin_connexion.html", erreur=erreur)
+
+
+@app.route("/gestion-ar-admin/dashboard")
+def admin_dashboard():
+    # ============================================================
+    # Dashboard principal admin.
+    # Affiche les stats et les retraits en attente.
+    # ============================================================
+    if not session.get("admin_connecte"):
+        return redirect(url_for("admin_connexion"))
+
+    stats            = admin_get_stats()
+    retraits_attente = admin_get_retraits_en_attente()
+    tous_retraits    = admin_get_tous_retraits()
+
+    return render_template(
+        "admin.html",
+        stats=stats,
+        retraits_attente=retraits_attente,
+        tous_retraits=tous_retraits
+    )
+
+
+@app.route("/gestion-ar-admin/valider/<retrait_id>", methods=["POST"])
+def admin_valider(retrait_id):
+    # ============================================================
+    # Valide un retrait (passe son statut à "validé").
+    # L'argent a déjà été déduit du solde lors de la demande,
+    # donc on ne touche pas au solde ici.
+    # ============================================================
+    if not session.get("admin_connecte"):
+        return redirect(url_for("admin_connexion"))
+
+    admin_valider_retrait(retrait_id)
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/gestion-ar-admin/refuser/<retrait_id>", methods=["POST"])
+def admin_refuser(retrait_id):
+    # ============================================================
+    # Refuse un retrait ET rembourse l'utilisateur.
+    # ============================================================
+    if not session.get("admin_connecte"):
+        return redirect(url_for("admin_connexion"))
+
+    admin_refuser_retrait(retrait_id)
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/gestion-ar-admin/deconnexion")
+def admin_deconnexion():
+    session.pop("admin_connecte", None)
+    return redirect(url_for("admin_connexion"))
 
 if __name__ == "__main__":
     app.run(debug=True)
