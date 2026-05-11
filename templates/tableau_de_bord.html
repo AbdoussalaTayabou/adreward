@@ -5,6 +5,17 @@
 {% block contenu %}
 <div class="container">
 
+    <!--
+        Message de confirmation après un retrait réussi.
+        On stocke le message dans la session Flask (flash maison),
+        on l'affiche ici puis on le supprime.
+    -->
+    {% if session.get("retrait_succes") %}
+    <div style="background:#d4edda; color:#155724; padding:12px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+        ✅ {{ session.pop("retrait_succes") }}
+    </div>
+    {% endif %}
+
     <div class="card" style="margin-bottom: 15px;">
         <h1>Bonjour, {{ utilisateur.nom }} 👋</h1>
         <p style="color:#666; margin-bottom:20px;">
@@ -23,18 +34,16 @@
     </div>
 
     <div class="card">
-        <!-- Bouton offres -->
         <a href="/offres" class="btn" style="display:block; text-align:center; margin-bottom:12px; text-decoration:none;">
             📺 Voir les offres
         </a>
 
-        <!-- Bouton historique -->
         <a href="/historique" class="btn" style="display:block; text-align:center; margin-bottom:12px; text-decoration:none; background:#6c757d;">
             📋 Mon historique
         </a>
 
         {% if utilisateur.solde >= 500 %}
-        <a href="#" class="btn" style="display:block; text-align:center; text-decoration:none; background:#28a745;">
+        <a href="/retrait" class="btn" style="display:block; text-align:center; text-decoration:none; background:#28a745;">
             💸 Demander un retrait
         </a>
         {% else %}

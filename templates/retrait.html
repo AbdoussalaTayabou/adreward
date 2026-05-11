@@ -1,0 +1,170 @@
+<!--
+    retrait.html — Page de demande de retrait Mobile Money
+-->
+{% extends "base.html" %}
+
+{% block titre %}Retrait — AdReward{% endblock %}
+
+{% block contenu %}
+<div class="container">
+
+    <!-- En-tête -->
+    <div class="card" style="margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <a href="/tableau-de-bord" style="color:#FF8000; text-decoration:none; font-weight:bold;">
+                ← Retour
+            </a>
+            <span style="font-weight:bold; color:#FF8000;">
+                💰 {{ utilisateur.solde }} FCFA
+            </span>
+        </div>
+        <h1 style="margin-bottom:0;">💸 Demander un retrait</h1>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="card" style="margin-bottom:15px;">
+
+        {% if erreur %}
+        <div class="erreur">{{ erreur }}</div>
+        {% endif %}
+
+        {% if utilisateur.solde < 500 %}
+        <!-- Solde insuffisant : on bloque le formulaire -->
+        <div style="background:#fff3cd; color:#856404; padding:12px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+            ⚠️ Il te faut au moins 500 FCFA pour retirer. Il te manque {{ 500 - utilisateur.solde }} FCFA.
+        </div>
+
+        {% else %}
+        <!-- Formulaire de retrait -->
+        <form method="POST" action="/retrait">
+
+            <!-- Opérateur Mobile Money -->
+            <label style="font-size:13px; color:#666; display:block; margin-bottom:6px;">
+                Opérateur Mobile Money
+            </label>
+            <select name="operateur" required style="
+                width:100%; padding:12px; margin-bottom:15px;
+                border:1px solid #ddd; border-radius:8px;
+                font-size:16px; background:white; color:#333;
+            ">
+                <option value="" disabled selected>Choisir un opérateur</option>
+                {% for op in operateurs %}
+                <option value="{{ op }}">{{ op }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Numéro de téléphone -->
+            <label style="font-size:13px; color:#666; display:block; margin-bottom:6px;">
+                Numéro Mobile Money
+            </label>
+            <input
+                type="tel"
+                name="numero_telephone"
+                placeholder="Ex: 70123456"
+                required
+                pattern="[0-9]{8,}"
+                title="8 chiffres minimum"
+            >
+
+            <!-- Montant -->
+            <label style="font-size:13px; color:#666; display:block; margin-bottom:6px;">
+                Montant à retirer (FCFA)
+            </label>
+            <!--
+                On propose des boutons rapides pour les montants courants.
+                Un clic remplit automatiquement le champ montant.
+            -->
+            <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+                {% set montants_rapides = [500, 1000, 2000, 5000] %}
+                {% for m in montants_rapides %}
+                {% if utilisateur.solde >= m %}
+                <button type="button"
+                    onclick="document.getElementById('montant').value={{ m }}"
+                    style="
+                        padding:6px 14px; border:1px solid #FF8000;
+                        border-radius:6px; background:white; color:#FF8000;
+                        font-size:13px; cursor:pointer;
+                    "
+                >{{ m }}</button>
+                {% endif %}
+                {% endfor %}
+                <!-- Bouton "Tout retirer" -->
+                <button type="button"
+                    onclick="document.getElementById('montant').value={{ utilisateur.solde }}"
+                    style="
+                        padding:6px 14px; border:1px solid #FF8000;
+                        border-radius:6px; background:#FF8000; color:white;
+                        font-size:13px; cursor:pointer;
+                    "
+                >Tout ({{ utilisateur.solde }})</button>
+            </div>
+
+            <input
+                type="number"
+                id="montant"
+                name="montant"
+                placeholder="Montant en FCFA"
+                min="500"
+                max="{{ utilisateur.solde }}"
+                required
+            >
+
+            <div style="font-size:12px; color:#aaa; margin-top:-10px; margin-bottom:15px;">
+                Min : 500 FCFA — Max : {{ utilisateur.solde }} FCFA
+            </div>
+
+            <button type="submit" class="btn">Envoyer la demande</button>
+        </form>
+        {% endif %}
+
+    </div>
+
+    <!-- Historique des retraits -->
+    {% if retraits %}
+    <div class="card">
+        <h1 style="font-size:17px; margin-bottom:15px;">Mes demandes de retrait</h1>
+
+        {% for r in retraits %}
+        <div style="
+            display:flex; justify-content:space-between; align-items:center;
+            padding:12px 0; border-bottom:1px solid #f0f0f0;
+        ">
+            <div>
+                <div style="font-weight:bold; font-size:14px; color:#333;">
+                    {{ r.operateur }} — {{ r.numero_telephone }}
+                </div>
+                <div style="font-size:11px; color:#aaa; margin-top:2px;">
+                    {{ r.created_at[:10] if r.created_at else "—" }}
+                </div>
+            </div>
+
+            <div style="text-align:right;">
+                <div style="font-weight:bold; font-size:15px; color:#333;">
+                    {{ r.montant_fcfa }} FCFA
+                </div>
+                <!-- Badge de statut coloré -->
+                <div style="
+                    font-size:11px; font-weight:bold; margin-top:3px;
+                    padding:2px 8px; border-radius:10px; display:inline-block;
+                    {% if r.statut == 'validé' %}
+                        background:#d4edda; color:#155724;
+                    {% elif r.statut == 'refusé' %}
+                        background:#f8d7da; color:#721c24;
+                    {% else %}
+                        background:#fff3cd; color:#856404;
+                    {% endif %}
+                ">
+                    {% if r.statut == 'validé' %}✅ Validé
+                    {% elif r.statut == 'refusé' %}❌ Refusé
+                    {% else %}⏳ En attente
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

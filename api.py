@@ -47,13 +47,6 @@ def get_utilisateur(utilisateur_id):
 
 
 def transaction_existe(transaction_id):
-    # ============================================================
-    # Vérifie si une transaction a déjà été traitée.
-    # C'est une sécurité anti-doublon : si CPX envoie deux fois
-    # le même postback (ça peut arriver), on ne crédite qu'une
-    # seule fois. On vérifie dans la table "transactions"
-    # si l'identifiant unique de la transaction existe déjà.
-    # ============================================================
     try:
         resultat = supabase.table("transactions") \
             .select("id") \
@@ -66,32 +59,22 @@ def transaction_existe(transaction_id):
 
 
 def crediter_solde(utilisateur_id, montant_fcfa, transaction_id, source="cpx"):
-    # ============================================================
-    # Crédite le solde d'un utilisateur après une offre complétée.
-    # ============================================================
-
-    # Étape 1 : anti-doublon
     if transaction_existe(transaction_id):
         print(f"Transaction {transaction_id} déjà traitée. Ignorée.")
         return False
 
     try:
-        # Étape 2 : récupère le solde actuel
         utilisateur = get_utilisateur(utilisateur_id)
         if not utilisateur:
-            print(f"Utilisateur {utilisateur_id} introuvable.")
             return False
 
-        solde_actuel = utilisateur["solde"]
-        nouveau_solde = solde_actuel + montant_fcfa
+        nouveau_solde = utilisateur["solde"] + montant_fcfa
 
-        # Étape 3 : met à jour le solde
         supabase.table("utilisateurs") \
             .update({"solde": nouveau_solde}) \
             .eq("id", utilisateur_id) \
             .execute()
 
-        # Étape 4 : enregistre la transaction
         supabase.table("transactions").insert({
             "utilisateur_id": utilisateur_id,
             "transaction_id": transaction_id,
@@ -108,26 +91,6 @@ def crediter_solde(utilisateur_id, montant_fcfa, transaction_id, source="cpx"):
 
 
 def get_transactions(utilisateur_id, limite=50):
-    # ============================================================
-    # Récupère les dernières transactions d'un utilisateur.
-    #
-    # Paramètres :
-    #   utilisateur_id : l'ID de l'utilisateur
-    #   limite         : nombre max de transactions à retourner
-    #                    (par défaut 50, les plus récentes d'abord)
-    #
-    # Retourne une liste de dicts, ex :
-    # [
-    #   {
-    #     "id": 1,
-    #     "montant_fcfa": 98,
-    #     "source": "cpx",
-    #     "transaction_id": "TX999",
-    #     "created_at": "2025-01-15T14:32:00"
-    #   },
-    #   ...
-    # ]
-    # ============================================================
     try:
         resultat = supabase.table("transactions") \
             .select("id, montant_fcfa, source, transaction_id, created_at") \
@@ -138,4 +101,92 @@ def get_transactions(utilisateur_id, limite=50):
         return resultat.data if resultat.data else []
     except Exception as e:
         print(f"Erreur get_transactions: {e}")
+        return []
+
+
+def retrait_en_attente_existe(utilisateur_id):
+    # ============================================================
+    # Vérifie si l'utilisateur a déjà une demande de retrait
+    # en attente. On interdit d'en soumettre deux en même temps.
+    # ============================================================
+    try:
+        resultat = supabase.table("retraits") \
+            .select("id") \
+            .eq("utilisateur_id", utilisateur_id) \
+            .eq("statut", "en_attente") \
+            .execute()
+        return len(resultat.data) > 0
+    except Exception as e:
+        print(f"Erreur retrait_en_attente_existe: {e}")
+        return False
+
+
+def creer_retrait(utilisateur_id, montant_fcfa, operateur, numero_telephone):
+    # ============================================================
+    # Crée une demande de retrait.
+    #
+    # Étapes :
+    #   1. Vérifie qu'il n'y a pas déjà une demande en attente
+    #   2. Vérifie que le solde est suffisant
+    #   3. Déduit le montant du solde immédiatement
+    #      (l'utilisateur ne peut pas dépenser cet argent
+    #       pendant que la demande est en cours)
+    #   4. Enregistre la demande dans la table "retraits"
+    #
+    # Retourne : ("ok", None) en cas de succès
+    #         ou (None, "message d'erreur") en cas d'échec
+    # ============================================================
+
+    if retrait_en_attente_existe(utilisateur_id):
+        return None, "Tu as déjà une demande en cours. Attends qu'elle soit traitée."
+
+    try:
+        utilisateur = get_utilisateur(utilisateur_id)
+        if not utilisateur:
+            return None, "Utilisateur introuvable."
+
+        if utilisateur["solde"] < montant_fcfa:
+            return None, "Solde insuffisant."
+
+        if montant_fcfa < 500:
+            return None, "Le montant minimum de retrait est 500 FCFA."
+
+        # Déduit le montant du solde immédiatement
+        nouveau_solde = utilisateur["solde"] - montant_fcfa
+        supabase.table("utilisateurs") \
+            .update({"solde": nouveau_solde}) \
+            .eq("id", utilisateur_id) \
+            .execute()
+
+        # Enregistre la demande
+        supabase.table("retraits").insert({
+            "utilisateur_id": utilisateur_id,
+            "montant_fcfa": montant_fcfa,
+            "operateur": operateur,
+            "numero_telephone": numero_telephone,
+            "statut": "en_attente"
+        }).execute()
+
+        print(f"✅ Retrait demandé : {montant_fcfa} FCFA → {operateur} {numero_telephone}")
+        return "ok", None
+
+    except Exception as e:
+        print(f"Erreur creer_retrait: {e}")
+        return None, "Une erreur est survenue. Réessaie plus tard."
+
+
+def get_retraits(utilisateur_id, limite=20):
+    # ============================================================
+    # Récupère les dernières demandes de retrait d'un utilisateur.
+    # ============================================================
+    try:
+        resultat = supabase.table("retraits") \
+            .select("id, montant_fcfa, operateur, numero_telephone, statut, created_at") \
+            .eq("utilisateur_id", utilisateur_id) \
+            .order("created_at", desc=True) \
+            .limit(limite) \
+            .execute()
+        return resultat.data if resultat.data else []
+    except Exception as e:
+        print(f"Erreur get_retraits: {e}")
         return []

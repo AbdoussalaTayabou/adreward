@@ -4,18 +4,22 @@
 
 import hashlib
 from flask import Flask, render_template, request, redirect, url_for, session
-from api import creer_utilisateur, connecter_utilisateur, get_utilisateur, crediter_solde, get_transactions
+from api import (
+    creer_utilisateur, connecter_utilisateur, get_utilisateur,
+    crediter_solde, get_transactions,
+    creer_retrait, get_retraits
+)
 
 app = Flask(__name__)
 app.secret_key = "adreward-secret-key-changer-en-production"
 
-# ============================================================
-# CONFIGURATION GÉNÉRALE
-# ============================================================
 CPX_APP_ID       = "32995"
 CPX_SECRET       = "SJOAjIyqrNKd8VsJBhNg4EcTTy23C9pi"
 TAUX_FCFA        = 563
-PART_UTILISATEUR = 0.35   # 35%
+PART_UTILISATEUR = 0.35
+
+# Opérateurs Mobile Money disponibles
+OPERATEURS = ["Orange Money", "Moov Money", "Airtel Money"]
 
 
 @app.route("/")
@@ -110,11 +114,6 @@ def offres():
 
 @app.route("/historique")
 def historique():
-    # ============================================================
-    # Page qui affiche les dernières transactions de l'utilisateur.
-    # On récupère ses 50 dernières transactions depuis Supabase
-    # et on les passe au template pour les afficher.
-    # ============================================================
     if "utilisateur_id" not in session:
         return redirect(url_for("connexion"))
 
@@ -124,11 +123,80 @@ def historique():
         return redirect(url_for("connexion"))
 
     transactions = get_transactions(session["utilisateur_id"])
+    return render_template("historique.html", utilisateur=utilisateur, transactions=transactions)
+
+
+@app.route("/retrait", methods=["GET", "POST"])
+def retrait():
+    # ============================================================
+    # Page de demande de retrait.
+    #
+    # GET  → affiche le formulaire + l'historique des retraits
+    # POST → traite la demande :
+    #   1. Valide les champs du formulaire
+    #   2. Appelle creer_retrait() qui déduit le solde
+    #      et enregistre la demande
+    #   3. Redirige vers le tableau de bord avec un message
+    #      de confirmation, ou réaffiche le formulaire avec
+    #      un message d'erreur
+    # ============================================================
+    if "utilisateur_id" not in session:
+        return redirect(url_for("connexion"))
+
+    utilisateur = get_utilisateur(session["utilisateur_id"])
+    if not utilisateur:
+        session.clear()
+        return redirect(url_for("connexion"))
+
+    erreur = None
+    succes = None
+
+    if request.method == "POST":
+        operateur        = request.form.get("operateur", "").strip()
+        numero_telephone = request.form.get("numero_telephone", "").strip()
+        montant_str      = request.form.get("montant", "").strip()
+
+        # Validation des champs
+        if not operateur or not numero_telephone or not montant_str:
+            erreur = "Tous les champs sont obligatoires."
+        elif operateur not in OPERATEURS:
+            erreur = "Opérateur invalide."
+        elif not numero_telephone.isdigit() or len(numero_telephone) < 8:
+            erreur = "Numéro de téléphone invalide (8 chiffres minimum)."
+        else:
+            try:
+                montant_fcfa = int(montant_str)
+            except ValueError:
+                erreur = "Montant invalide."
+                montant_fcfa = 0
+
+            if not erreur:
+                resultat, message_erreur = creer_retrait(
+                    utilisateur_id=session["utilisateur_id"],
+                    montant_fcfa=montant_fcfa,
+                    operateur=operateur,
+                    numero_telephone=numero_telephone
+                )
+                if resultat:
+                    # Succès : on recharge l'utilisateur pour avoir le nouveau solde
+                    # puis on redirige vers le tableau de bord
+                    session["retrait_succes"] = f"Demande de retrait de {montant_fcfa} FCFA envoyée avec succès !"
+                    return redirect(url_for("tableau_de_bord"))
+                else:
+                    erreur = message_erreur
+
+        # Si erreur, on recharge l'utilisateur (son solde n'a pas changé)
+        utilisateur = get_utilisateur(session["utilisateur_id"])
+
+    retraits = get_retraits(session["utilisateur_id"])
 
     return render_template(
-        "historique.html",
+        "retrait.html",
         utilisateur=utilisateur,
-        transactions=transactions
+        operateurs=OPERATEURS,
+        retraits=retraits,
+        erreur=erreur,
+        succes=succes
     )
 
 
@@ -139,26 +207,22 @@ def postback_cpx():
     transaction_id = request.args.get("transaction_id", "")
     hash_recu      = request.args.get("hash", "")
 
-    # Vérification de la signature
     hash_attendu = hashlib.md5(
         f"{transaction_id}-{CPX_SECRET}".encode()
     ).hexdigest()
 
     if hash_recu != hash_attendu:
-        print(f"❌ Postback rejeté : signature invalide. Reçu={hash_recu} Attendu={hash_attendu}")
         return "Invalid hash", 403
 
-    # Calcul du montant en FCFA
     try:
-        montant_usd   = float(amount_usd)
-        montant_fcfa  = int(montant_usd * TAUX_FCFA * PART_UTILISATEUR)
+        montant_usd  = float(amount_usd)
+        montant_fcfa = int(montant_usd * TAUX_FCFA * PART_UTILISATEUR)
     except ValueError:
         return "Invalid amount", 400
 
     if montant_fcfa <= 0:
         return "OK", 200
 
-    # Créditer le solde
     succes = crediter_solde(
         utilisateur_id=ext_user_id,
         montant_fcfa=montant_fcfa,
@@ -166,10 +230,7 @@ def postback_cpx():
         source="cpx"
     )
 
-    if succes:
-        return "1", 200
-    else:
-        return "Error", 500
+    return ("1", 200) if succes else ("Error", 500)
 
 
 if __name__ == "__main__":
