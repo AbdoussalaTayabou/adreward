@@ -28,8 +28,7 @@ ADMIN_MOT_DE_PASSE = os.environ.get("ADMIN_MOT_DE_PASSE", "AdReward@Admin2025")
 def accueil():
     if "utilisateur_id" in session:
         return redirect(url_for("tableau_de_bord"))
-    return redirect(url_for("connexion"))
-
+    return render_template("accueil.html")   # ← au lieu de redirect vers connexion
 
 @app.route("/inscription", methods=["GET", "POST"])
 def inscription():
@@ -90,6 +89,16 @@ def tableau_de_bord():
         return redirect(url_for("connexion"))
 
     return render_template("tableau_de_bord.html", utilisateur=utilisateur)
+
+@app.route("/profil")
+def profil():
+    if "utilisateur_id" not in session:
+        return redirect(url_for("connexion"))
+    utilisateur = get_utilisateur(session["utilisateur_id"])
+    if not utilisateur:
+        session.clear()
+        return redirect(url_for("connexion"))
+    return render_template("profil.html", utilisateur=utilisateur)
 
 
 @app.route("/offres")
