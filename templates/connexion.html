@@ -1,38 +1,299 @@
-<!--
-    connexion.html — Page de connexion
--->
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion — AdReward</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF8000;
+            --primary-dark: #E06B00;
+            --primary-light: #FFF3E0;
+            --text-1: #0F172A;
+            --text-2: #475569;
+            --text-3: #94A3B8;
+            --border: #E8EDF3;
+            --surface: #FFFFFF;
+            --bg: #F5F7FA;
+            --error-light: #FEF2F2;
+            --radius-sm: 10px;
+            --radius-md: 14px;
+            --radius-full: 9999px;
+            --shadow-orange: 0 8px 24px rgba(255,128,0,0.28);
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Figtree', sans-serif;
+            background: var(--bg);
+            color: var(--text-1);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+        .auth-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 420px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 32px 20px 40px;
+        }
+        .auth-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-3);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        .back-link:hover { color: var(--text-1); }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 800;
+            font-size: 17px;
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .brand-icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px;
+            box-shadow: var(--shadow-orange);
+        }
+        .auth-header {
+            margin-bottom: 32px;
+        }
+        .auth-header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 34px;
+            color: var(--text-1);
+            margin-bottom: 6px;
+        }
+        .auth-header p {
+            font-size: 15px;
+            color: var(--text-3);
+        }
+        .auth-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 28px 24px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            border: 1px solid var(--border);
+        }
+        .alert-error {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--error-light);
+            color: #B91C1C;
+            border: 1px solid #FECACA;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-2);
+            margin-bottom: 7px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .input-wrapper { position: relative; }
+        .input-icon {
+            position: absolute;
+            left: 14px; top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            pointer-events: none;
+        }
+        .form-control {
+            width: 100%;
+            padding: 13px 16px 13px 42px;
+            background: #F8F9FC;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Figtree', sans-serif;
+            font-size: 15px;
+            color: var(--text-1);
+            transition: var(--transition);
+            outline: none;
+        }
+        .form-control:focus {
+            border-color: var(--primary);
+            background: var(--surface);
+            box-shadow: 0 0 0 3px rgba(255,128,0,0.1);
+        }
+        .form-control::placeholder { color: var(--text-3); }
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: 'Figtree', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-orange);
+            margin-top: 8px;
+            letter-spacing: 0.3px;
+        }
+        .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(255,128,0,0.38); }
+        .btn-submit:active { transform: translateY(0); }
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            color: var(--text-3);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        .signup-prompt {
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-3);
+        }
+        .signup-prompt a {
+            color: var(--primary);
+            font-weight: 700;
+            text-decoration: none;
+        }
+        .signup-prompt a:hover { text-decoration: underline; }
 
-{% block titre %}Connexion — AdReward{% endblock %}
+        /* Password toggle */
+        .toggle-pw {
+            position: absolute;
+            right: 14px; top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 17px;
+            color: var(--text-3);
+            padding: 0;
+            transition: var(--transition);
+        }
+        .toggle-pw:hover { color: var(--text-1); }
 
-{% block contenu %}
-<div class="container">
-    <div class="card">
-        <h1>Se connecter</h1>
+        .features-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 28px;
+            justify-content: center;
+        }
+        .pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-full);
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-2);
+        }
+    </style>
+</head>
+<body>
+<div class="auth-container">
+    <div class="auth-top">
+        <a href="/" class="back-link">
+            ← Retour
+        </a>
+        <a href="/" class="brand">
+            <div class="brand-icon">💰</div>
+            AdReward
+        </a>
+    </div>
 
+    <div class="auth-header">
+        <h1>Bon retour 👋</h1>
+        <p>Connecte-toi pour voir tes gains.</p>
+    </div>
+
+    <div class="auth-card">
         {% if erreur %}
-        <div class="erreur">{{ erreur }}</div>
+        <div class="alert-error">
+            <span>⚠️</span>
+            <span>{{ erreur }}</span>
+        </div>
         {% endif %}
 
         <form method="POST" action="/connexion">
-            <input
-                type="email"
-                name="email"
-                placeholder="Ton adresse email"
-                required
-            >
-            <input
-                type="password"
-                name="mot_de_passe"
-                placeholder="Ton mot de passe"
-                required
-            >
-            <button type="submit" class="btn">Se connecter</button>
+            <div class="form-group">
+                <label class="form-label">Adresse email</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">✉️</span>
+                    <input type="email" name="email" class="form-control" placeholder="tonemail@exemple.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Mot de passe</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔒</span>
+                    <input type="password" name="mot_de_passe" id="mdp" class="form-control" placeholder="••••••••••" required autocomplete="current-password">
+                    <button type="button" class="toggle-pw" onclick="togglePw()">👁️</button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Se connecter →</button>
         </form>
 
-        <div class="lien-secondaire">
-            Pas encore de compte ? <a href="/inscription">S'inscrire</a>
+        <div class="divider">ou</div>
+
+        <div class="signup-prompt">
+            Pas encore de compte ?
+            <a href="/inscription">Crée le maintenant</a>
         </div>
     </div>
+
+    <div class="features-pills">
+        <div class="pill">🔒 Sécurisé</div>
+        <div class="pill">⚡ Gains instantanés</div>
+        <div class="pill">📱 Mobile Money</div>
+    </div>
 </div>
-{% endblock %}
+
+<script>
+    function togglePw() {
+        const input = document.getElementById('mdp');
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+</script>
+</body>
+</html>

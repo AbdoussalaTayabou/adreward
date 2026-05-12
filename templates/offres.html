@@ -1,48 +1,161 @@
-<!--
-    offres.html — Page des offres CPX Research
-    Cette page affiche les publicités et sondages disponibles
-    via une iframe qui pointe vers CPX Research.
--->
 {% extends "base.html" %}
-
 {% block titre %}Offres — AdReward{% endblock %}
 
+{% block styles %}
+<style>
+    .offers-header {
+        background: linear-gradient(135deg, #FF8000, #E06B00);
+        margin: 0 -16px;
+        padding: 20px 16px 24px;
+        margin-bottom: 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .offers-header::after {
+        content: '';
+        position: absolute;
+        top: -30px; right: -30px;
+        width: 120px; height: 120px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+    }
+
+    .offers-header h1 {
+        font-size: 22px;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 4px;
+    }
+
+    .offers-header p {
+        font-size: 13px;
+        color: rgba(255,255,255,0.8);
+        line-height: 1.5;
+    }
+
+    .balance-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255,255,255,0.2);
+        backdrop-filter: blur(8px);
+        color: white;
+        padding: 6px 14px;
+        border-radius: 99px;
+        font-size: 13px;
+        font-weight: 700;
+        margin-top: 12px;
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .offers-tip {
+        background: #FFFBEB;
+        border: 1px solid #FDE68A;
+        border-radius: 0 0 12px 12px;
+        margin: 0 -16px;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: #92400E;
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+
+    .iframe-container {
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .iframe-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        gap: 14px;
+    }
+
+    .spinner {
+        width: 42px; height: 42px;
+        border: 3px solid var(--border);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+        font-size: 14px;
+        color: var(--text-3);
+        font-weight: 600;
+    }
+
+    iframe { display: block; }
+</style>
+{% endblock %}
+
 {% block contenu %}
-<div style="max-width:480px; margin:0 auto;">
+<div style="margin: 0 -16px; padding: 0 16px; position: relative;">
 
-    <!-- Barre du haut avec solde et retour -->
-    <div style="background:white; padding:12px 15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee;">
-        <a href="/tableau-de-bord" style="color:#FF8000; text-decoration:none; font-weight:bold;">
-            ← Retour
-        </a>
-        <span style="font-weight:bold; color:#FF8000;">
+    <!-- Header -->
+    <div class="offers-header">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+                <h1>📺 Offres disponibles</h1>
+                <p>Complète une offre et gagne des FCFA instantanément</p>
+            </div>
+        </div>
+        <div class="balance-chip">
             💰 {{ utilisateur.solde }} FCFA
-        </span>
+        </div>
     </div>
 
-    <!-- Message d'explication -->
-    <div style="background:#fff8f0; padding:12px 15px; font-size:13px; color:#666; border-bottom:1px solid #eee;">
-        📺 Complète une offre ci-dessous pour gagner des FCFA. Ton solde se met à jour automatiquement.
+    <div class="offers-tip">
+        ⚡ Tes gains sont crédités automatiquement dès la fin de chaque offre.
     </div>
-
-    <!--
-        L'iframe affiche le contenu de CPX Research directement
-        dans notre page. L'utilisateur reste sur notre app
-        mais voit les offres de CPX.
-
-        cpx_url est construite dans app.py avec les infos
-        de l'utilisateur connecté.
-    -->
-    <iframe
-        src="{{ cpx_url }}"
-        style="width:100%; height:80vh; border:none; display:block;"
-        allow="camera; microphone"
-    ></iframe>
-    <!--
-        allow="camera; microphone" : certains sondages CPX
-        demandent accès à la caméra ou au micro.
-        On l'autorise ici pour ne pas bloquer ces offres.
-    -->
 
 </div>
+
+<div class="container">
+    <div class="iframe-container">
+        <!-- Loading state -->
+        <div class="iframe-loading" id="iframe-loader">
+            <div class="spinner"></div>
+            <div class="loading-text">Chargement des offres...</div>
+        </div>
+
+        <iframe
+            src="{{ cpx_url }}"
+            style="width:100%; height:78vh; border:none; display:none;"
+            allow="camera; microphone"
+            id="offers-frame"
+            onload="frameLoaded()"
+        ></iframe>
+    </div>
+</div>
+
+<script>
+    function frameLoaded() {
+        document.getElementById('iframe-loader').style.display = 'none';
+        const frame = document.getElementById('offers-frame');
+        frame.style.display = 'block';
+    }
+
+    // Fallback if iframe takes too long
+    setTimeout(() => {
+        const loader = document.getElementById('iframe-loader');
+        if (loader.style.display !== 'none') {
+            loader.innerHTML = '<div style="text-align:center; padding:20px"><div style="font-size:36px; margin-bottom:12px">⚠️</div><div style="font-size:14px; color:#64748B">Les offres mettent du temps à charger.<br>Vérifie ta connexion.</div></div>';
+        }
+    }, 15000);
+</script>
 {% endblock %}

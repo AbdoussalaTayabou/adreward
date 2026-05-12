@@ -1,121 +1,261 @@
-<!--
-    historique.html — Historique des gains de l'utilisateur
-    Affiche les 50 dernières transactions triées par date décroissante.
--->
 {% extends "base.html" %}
-
 {% block titre %}Historique — AdReward{% endblock %}
+
+{% block styles %}
+<style>
+    .history-summary {
+        background: linear-gradient(135deg, #FF8000, #E06B00);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        color: white;
+        margin-bottom: 12px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(255,128,0,0.3);
+    }
+
+    .history-summary::before {
+        content: '';
+        position: absolute;
+        top: -20px; right: -20px;
+        width: 120px; height: 120px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+    }
+
+    .summary-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        opacity: 0.75;
+        margin-bottom: 6px;
+    }
+
+    .summary-total {
+        font-family: 'DM Serif Display', serif;
+        font-size: 44px;
+        line-height: 1;
+        margin-bottom: 4px;
+    }
+
+    .summary-currency {
+        font-size: 14px;
+        opacity: 0.75;
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+
+    .summary-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .summary-stat {
+        background: rgba(255,255,255,0.15);
+        border-radius: 10px;
+        padding: 10px 12px;
+    }
+
+    .summary-stat-value {
+        font-size: 20px;
+        font-weight: 800;
+    }
+
+    .summary-stat-label {
+        font-size: 11px;
+        opacity: 0.75;
+        margin-top: 2px;
+    }
+
+    /* Transaction list */
+    .tx-card {
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .tx-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        transition: background var(--transition);
+    }
+
+    .tx-item:last-child { border-bottom: none; }
+    .tx-item:hover { background: var(--bg); }
+
+    .tx-icon {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .tx-icon-cpx      { background: #EFF6FF; }
+    .tx-icon-lootably { background: #F0FDF4; }
+    .tx-icon-other    { background: var(--primary-xlight); }
+
+    .tx-content { flex: 1; min-width: 0; }
+    .tx-source {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-1);
+    }
+    .tx-date {
+        font-size: 12px;
+        color: var(--text-3);
+        margin-top: 2px;
+    }
+
+    .tx-amount {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--success);
+        white-space: nowrap;
+    }
+
+    /* Month group header */
+    .month-group {
+        padding: 8px 16px 6px;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-3);
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .filter-chips {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .filter-chips::-webkit-scrollbar { display: none; }
+
+    .chip {
+        padding: 6px 14px;
+        border-radius: 99px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: var(--transition);
+        border: 1.5px solid var(--border);
+        background: var(--surface);
+        color: var(--text-2);
+    }
+
+    .chip.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+</style>
+{% endblock %}
 
 {% block contenu %}
 <div class="container">
 
-    <!-- En-tête avec solde -->
-    <div class="card" style="margin-bottom: 15px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <a href="/tableau-de-bord" style="color:#FF8000; text-decoration:none; font-weight:bold;">
-                ← Retour
-            </a>
-            <span style="font-weight:bold; color:#FF8000;">
-                💰 {{ utilisateur.solde }} FCFA
-            </span>
+    <div class="page-header">
+        <div>
+            <div class="page-title">📋 Historique</div>
+            <div style="font-size:13px; color:var(--text-3); margin-top:3px;">Toutes tes transactions</div>
         </div>
-        <h1 style="margin-bottom:0;">📋 Historique</h1>
     </div>
 
-    <!-- Liste des transactions -->
+    {% if transactions %}
+    {% set ns = namespace(total=0) %}
+    {% for t in transactions %}{% set ns.total = ns.total + t.montant_fcfa %}{% endfor %}
+
+    <!-- Summary Card -->
+    <div class="history-summary">
+        <div class="summary-label">Total gagné</div>
+        <div class="summary-total">{{ ns.total }}</div>
+        <div class="summary-currency">FCFA au total</div>
+
+        <div class="summary-stats">
+            <div class="summary-stat">
+                <div class="summary-stat-value">{{ transactions|length }}</div>
+                <div class="summary-stat-label">Offre{{ 's' if transactions|length > 1 else '' }} complétée{{ 's' if transactions|length > 1 else '' }}</div>
+            </div>
+            <div class="summary-stat">
+                <div class="summary-stat-value">{{ (ns.total / transactions|length)|round|int }}</div>
+                <div class="summary-stat-label">FCFA en moyenne</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="tx-card">
+        {% for t in transactions %}
+        <div class="tx-item">
+            <div class="tx-icon
+                {% if t.source == 'cpx' %}tx-icon-cpx
+                {% elif t.source == 'lootably' %}tx-icon-lootably
+                {% else %}tx-icon-other{% endif %}">
+                {% if t.source == 'cpx' %}📺
+                {% elif t.source == 'lootably' %}🎮
+                {% else %}⭐{% endif %}
+            </div>
+            <div class="tx-content">
+                <div class="tx-source">
+                    {% if t.source == 'cpx' %}CPX Research
+                    {% elif t.source == 'lootably' %}Lootably
+                    {% else %}Offre complétée{% endif %}
+                </div>
+                <div class="tx-date">
+                    {% if t.created_at %}
+                        {{ t.created_at[:10] }}
+                        {% if t.created_at|length > 10 %}
+                        · {{ t.created_at[11:16] }}
+                        {% endif %}
+                    {% else %}—{% endif %}
+                </div>
+            </div>
+            <div>
+                <div class="tx-amount">+{{ t.montant_fcfa }} FCFA</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div style="text-align:center; margin-top:16px; font-size:12px; color:var(--text-3);">
+        Affichage des {{ transactions|length }} dernières transactions
+    </div>
+
+    {% else %}
+
+    <!-- Empty state -->
     <div class="card">
-
-        {% if transactions %}
-
-            <!-- Résumé rapide -->
-            <div style="background:#fff8f0; border-radius:8px; padding:12px; margin-bottom:20px; text-align:center;">
-                <div style="font-size:12px; color:#888; margin-bottom:4px;">TOTAL GAGNÉ</div>
-                <div style="font-size:28px; font-weight:bold; color:#FF8000;">
-                    <!--
-                        On calcule le total côté template Jinja2.
-                        "namespace" permet de modifier une variable
-                        à l'intérieur d'une boucle for (limitation Jinja2).
-                    -->
-                    {% set ns = namespace(total=0) %}
-                    {% for t in transactions %}
-                        {% set ns.total = ns.total + t.montant_fcfa %}
-                    {% endfor %}
-                    {{ ns.total }} FCFA
-                </div>
-                <div style="font-size:12px; color:#aaa; margin-top:4px;">
-                    {{ transactions|length }} offre{{ 's' if transactions|length > 1 else '' }} complétée{{ 's' if transactions|length > 1 else '' }}
-                </div>
-            </div>
-
-            <!-- Tableau des transactions -->
-            {% for t in transactions %}
-            <div style="
-                display:flex;
-                justify-content:space-between;
-                align-items:center;
-                padding:12px 0;
-                border-bottom:1px solid #f0f0f0;
-            ">
-                <!-- Icône + source + date -->
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="
-                        width:38px; height:38px;
-                        background:#fff8f0;
-                        border-radius:50%;
-                        display:flex; align-items:center; justify-content:center;
-                        font-size:18px;
-                        flex-shrink:0;
-                    ">
-                        {% if t.source == "cpx" %}📺
-                        {% elif t.source == "lootably" %}🎮
-                        {% else %}⭐{% endif %}
-                    </div>
-                    <div>
-                        <div style="font-weight:bold; font-size:14px; color:#333;">
-                            {% if t.source == "cpx" %}CPX Research
-                            {% elif t.source == "lootably" %}Lootably
-                            {% else %}Offre complétée{% endif %}
-                        </div>
-                        <div style="font-size:11px; color:#aaa; margin-top:2px;">
-                            <!--
-                                created_at vient de Supabase au format ISO 8601
-                                ex: "2025-01-15T14:32:00.123456+00:00"
-                                On affiche seulement les 10 premiers caractères
-                                pour avoir "2025-01-15" (la date seulement).
-                            -->
-                            {{ t.created_at[:10] if t.created_at else "—" }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Montant -->
-                <div style="font-weight:bold; color:#28a745; font-size:16px; white-space:nowrap;">
-                    +{{ t.montant_fcfa }} FCFA
-                </div>
-            </div>
-            {% endfor %}
-
-        {% else %}
-            <!-- Aucune transaction encore -->
-            <div style="text-align:center; padding:40px 20px; color:#aaa;">
-                <div style="font-size:48px; margin-bottom:15px;">📭</div>
-                <div style="font-size:16px; font-weight:bold; color:#666; margin-bottom:8px;">
-                    Pas encore de gains
-                </div>
-                <div style="font-size:14px; margin-bottom:20px;">
-                    Complète ta première offre pour voir ton historique ici.
-                </div>
-                <a href="/offres" class="btn" style="
-                    display:inline-block;
-                    width:auto;
-                    padding:10px 25px;
-                    text-decoration:none;
-                ">
-                    📺 Voir les offres
-                </a>
-            </div>
-        {% endif %}
-
+        <div class="empty-state">
+            <span class="empty-icon">📭</span>
+            <div class="empty-title">Pas encore de gains</div>
+            <div class="empty-desc">Complète ta première offre pour voir<br>ton historique ici.</div>
+            <a href="/offres" class="btn" style="margin-top:4px;">
+                📺 Voir les offres
+            </a>
+        </div>
     </div>
+
+    {% endif %}
 </div>
 {% endblock %}

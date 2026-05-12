@@ -1,60 +1,315 @@
 {% extends "base.html" %}
-
 {% block titre %}Tableau de bord — AdReward{% endblock %}
+
+{% block styles %}
+<style>
+    .balance-hero {
+        background: linear-gradient(135deg, #FF8000, #E06B00);
+        border-radius: 20px;
+        padding: 28px 24px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(255,128,0,0.35);
+        margin-bottom: 12px;
+    }
+
+    .balance-hero::before {
+        content: '';
+        position: absolute;
+        top: -40px; right: -40px;
+        width: 160px; height: 160px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+    }
+
+    .balance-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -60px; right: 20px;
+        width: 200px; height: 200px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+    }
+
+    .balance-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        opacity: 0.8;
+        margin-bottom: 8px;
+    }
+
+    .balance-amount {
+        font-family: 'DM Serif Display', serif;
+        font-size: 54px;
+        line-height: 1;
+        margin-bottom: 4px;
+    }
+
+    .balance-currency {
+        font-size: 14px;
+        opacity: 0.75;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+
+    /* Progress vers retrait */
+    .withdrawal-progress {
+        background: rgba(255,255,255,0.15);
+        border-radius: 99px;
+        height: 8px;
+        overflow: hidden;
+        margin-bottom: 6px;
+    }
+
+    .withdrawal-fill {
+        height: 100%;
+        background: rgba(255,255,255,0.9);
+        border-radius: 99px;
+        transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .withdrawal-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        opacity: 0.75;
+        font-weight: 600;
+    }
+
+    /* Quick actions grid */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .action-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 18px 16px;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: var(--transition);
+        box-shadow: var(--shadow-xs);
+    }
+
+    .action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary);
+    }
+
+    .action-icon {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 22px;
+    }
+
+    .action-icon-orange { background: var(--primary-xlight); }
+    .action-icon-green  { background: var(--success-light); }
+    .action-icon-blue   { background: #EFF6FF; }
+    .action-icon-purple { background: #F5F3FF; }
+
+    .action-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-1);
+    }
+
+    .action-desc {
+        font-size: 11px;
+        color: var(--text-3);
+        line-height: 1.4;
+    }
+
+    /* Withdraw CTA */
+    .withdraw-cta {
+        background: var(--surface);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-xs);
+        margin-bottom: 12px;
+    }
+
+    .withdraw-cta-icon {
+        width: 48px; height: 48px;
+        background: var(--success-light);
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .withdraw-cta-text { flex: 1; }
+    .withdraw-cta-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-1);
+        margin-bottom: 2px;
+    }
+    .withdraw-cta-sub {
+        font-size: 12px;
+        color: var(--text-3);
+    }
+
+    .btn-withdraw {
+        padding: 10px 16px;
+        background: linear-gradient(135deg, var(--success), #059669);
+        color: white;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-family: 'Figtree', sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        white-space: nowrap;
+        box-shadow: 0 4px 14px rgba(16,185,129,0.3);
+        transition: var(--transition);
+    }
+    .btn-withdraw:hover { transform: translateY(-1px); }
+
+    /* Section header */
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .section-title-sm {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-1);
+    }
+    .see-all {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    /* Greeting */
+    .greeting {
+        margin-bottom: 16px;
+    }
+    .greeting-sub {
+        font-size: 13px;
+        color: var(--text-3);
+        margin-top: 3px;
+    }
+
+    /* Tips card */
+    .tip-card {
+        background: linear-gradient(135deg, #F0F9FF, #E0F2FE);
+        border: 1px solid #BAE6FD;
+        border-radius: var(--radius-md);
+        padding: 16px;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    .tip-icon { font-size: 22px; flex-shrink: 0; }
+    .tip-title { font-size: 13px; font-weight: 700; color: #0C4A6E; margin-bottom: 3px; }
+    .tip-desc  { font-size: 12px; color: #075985; line-height: 1.5; }
+</style>
+{% endblock %}
 
 {% block contenu %}
 <div class="container">
 
-    <!--
-        Message de confirmation après un retrait réussi.
-        On stocke le message dans la session Flask (flash maison),
-        on l'affiche ici puis on le supprime.
-    -->
+    <!-- Flash success -->
     {% if session.get("retrait_succes") %}
-    <div style="background:#d4edda; color:#155724; padding:12px; border-radius:8px; margin-bottom:15px; font-size:14px;">
-        ✅ {{ session.pop("retrait_succes") }}
-    </div>
+    <div style="display:none" id="flash-msg">{{ session.pop("retrait_succes") }}</div>
     {% endif %}
 
-    <div class="card" style="margin-bottom: 15px;">
-        <h1>Bonjour, {{ utilisateur.nom }} 👋</h1>
-        <p style="color:#666; margin-bottom:20px;">
-            Regarde des publicités et gagne de l'argent !
-        </p>
+    <!-- Greeting -->
+    <div class="greeting">
+        <div class="page-title">Bonjour, {{ utilisateur.nom.split()[0] }} 👋</div>
+        <div class="greeting-sub">Prêt à gagner aujourd'hui ?</div>
+    </div>
 
-        <div style="background:#fff8f0; border-radius:10px; padding:20px; text-align:center;">
-            <div style="font-size:13px; color:#888; margin-bottom:5px;">TON SOLDE</div>
-            <div style="font-size:40px; font-weight:bold; color:#FF8000;">
-                {{ utilisateur.solde }} FCFA
-            </div>
-            <div style="font-size:12px; color:#aaa; margin-top:5px;">
-                Minimum de retrait : 500 FCFA
-            </div>
+    <!-- Balance Hero Card -->
+    <div class="balance-hero">
+        <div class="balance-label">Ton solde disponible</div>
+        <div class="balance-amount">{{ utilisateur.solde }}</div>
+        <div class="balance-currency">FCFA</div>
+
+        {% set pct = [((utilisateur.solde / 500) * 100), 100]|min %}
+        <div class="withdrawal-progress">
+            <div class="withdrawal-fill" style="width: {{ pct }}%"></div>
+        </div>
+        <div class="withdrawal-labels">
+            {% if utilisateur.solde >= 500 %}
+            <span>✅ Retrait disponible !</span>
+            <span>{{ utilisateur.solde }} / 500 FCFA</span>
+            {% else %}
+            <span>Objectif retrait</span>
+            <span>{{ utilisateur.solde }} / 500 FCFA</span>
+            {% endif %}
         </div>
     </div>
 
-    <div class="card">
-        <a href="/offres" class="btn" style="display:block; text-align:center; margin-bottom:12px; text-decoration:none;">
-            📺 Voir les offres
-        </a>
+    <!-- Withdraw CTA if eligible -->
+    {% if utilisateur.solde >= 500 %}
+    <div class="withdraw-cta">
+        <div class="withdraw-cta-icon">💸</div>
+        <div class="withdraw-cta-text">
+            <div class="withdraw-cta-title">Retrait disponible !</div>
+            <div class="withdraw-cta-sub">Envoie tes gains sur Mobile Money</div>
+        </div>
+        <a href="/retrait" class="btn-withdraw">Retirer →</a>
+    </div>
+    {% endif %}
 
-        <a href="/historique" class="btn" style="display:block; text-align:center; margin-bottom:12px; text-decoration:none; background:#6c757d;">
-            📋 Mon historique
+    <!-- Quick actions -->
+    <div class="quick-actions">
+        <a href="/offres" class="action-card">
+            <div class="action-icon action-icon-orange">📺</div>
+            <div class="action-label">Voir les offres</div>
+            <div class="action-desc">Complète des sondages et gagne</div>
         </a>
+        <a href="/historique" class="action-card">
+            <div class="action-icon action-icon-blue">📋</div>
+            <div class="action-label">Historique</div>
+            <div class="action-desc">Tous tes gains passés</div>
+        </a>
+        <a href="/retrait" class="action-card">
+            <div class="action-icon action-icon-green">💳</div>
+            <div class="action-label">Retrait</div>
+            <div class="action-desc">Mobile Money en 24h</div>
+        </a>
+        <a href="/profil" class="action-card">
+            <div class="action-icon action-icon-purple">👤</div>
+            <div class="action-label">Mon profil</div>
+            <div class="action-desc">Tes informations</div>
+        </a>
+    </div>
 
-        {% if utilisateur.solde >= 500 %}
-        <a href="/retrait" class="btn" style="display:block; text-align:center; text-decoration:none; background:#28a745;">
-            💸 Demander un retrait
-        </a>
-        {% else %}
-        <a href="#" class="btn" style="display:block; text-align:center; text-decoration:none; background:#aaa; cursor:not-allowed;">
-            💸 Demander un retrait
-        </a>
-        <p style="text-align:center; font-size:12px; color:#aaa; margin-top:8px;">
-            Il te manque {{ 500 - utilisateur.solde }} FCFA pour retirer.
-        </p>
-        {% endif %}
+    <!-- Tip -->
+    <div class="tip-card">
+        <div class="tip-icon">💡</div>
+        <div>
+            <div class="tip-title">Astuce du jour</div>
+            <div class="tip-desc">Complète les sondages longs : ils rapportent jusqu'à 3× plus que les courts !</div>
+        </div>
     </div>
 
 </div>
+
+<script>
+    const flashMsg = document.getElementById('flash-msg');
+    if (flashMsg) showToast(flashMsg.textContent, 'success');
+</script>
 {% endblock %}

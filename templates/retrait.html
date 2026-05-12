@@ -1,170 +1,338 @@
-<!--
-    retrait.html — Page de demande de retrait Mobile Money
--->
-{% extends "base.html" %}
+html
 
+{% extends "base.html" %}
 {% block titre %}Retrait — AdReward{% endblock %}
+
+{% block styles %}
+<style>
+    .retrait-hero {
+        background: linear-gradient(135deg, #10B981, #059669);
+        border-radius: var(--radius-lg);
+        padding: 22px 20px;
+        margin-bottom: 12px;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 8px 28px rgba(16,185,129,0.3);
+    }
+
+    .retrait-hero-icon {
+        font-size: 42px;
+        flex-shrink: 0;
+    }
+
+    .retrait-hero-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        opacity: 0.8;
+        margin-bottom: 4px;
+    }
+
+    .retrait-hero-amount {
+        font-family: 'DM Serif Display', serif;
+        font-size: 38px;
+        line-height: 1;
+    }
+
+    .retrait-hero-currency {
+        font-size: 13px;
+        opacity: 0.75;
+        font-weight: 600;
+    }
+
+    /* Amount quick buttons */
+    .amount-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .amount-btn {
+        padding: 10px 6px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        color: var(--text-2);
+        font-family: 'Figtree', sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: center;
+        transition: var(--transition);
+    }
+    .amount-btn:hover, .amount-btn.active {
+        border-color: var(--primary);
+        background: var(--primary-xlight);
+        color: var(--primary);
+    }
+    .amount-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    /* Operator selector */
+    .operator-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .operator-btn {
+        padding: 12px 8px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        cursor: pointer;
+        text-align: center;
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .operator-btn:hover { border-color: var(--primary); }
+
+    .operator-btn.selected {
+        border-color: var(--primary);
+        background: var(--primary-xlight);
+    }
+
+    .operator-btn.selected::after {
+        content: '✓';
+        position: absolute;
+        top: 4px; right: 6px;
+        font-size: 10px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+
+    .operator-emoji { font-size: 22px; margin-bottom: 4px; }
+    .operator-name {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-2);
+        line-height: 1.3;
+    }
+
+    /* History */
+    .retrait-hist-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .retrait-hist-item:last-child { border-bottom: none; }
+
+    .hist-op { font-size: 14px; font-weight: 700; color: var(--text-1); }
+    .hist-num { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+    .hist-date { font-size: 11px; color: var(--text-3); }
+
+    .hist-right { text-align: right; }
+    .hist-amount { font-size: 15px; font-weight: 700; color: var(--text-1); margin-bottom: 4px; }
+
+    .info-box {
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        border-radius: var(--radius-sm);
+        padding: 12px 14px;
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+    .info-box-icon { font-size: 16px; flex-shrink: 0; }
+    .info-box-text { font-size: 13px; color: #1E40AF; line-height: 1.5; }
+</style>
+{% endblock %}
 
 {% block contenu %}
 <div class="container">
 
-    <!-- En-tête -->
-    <div class="card" style="margin-bottom:15px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <a href="/tableau-de-bord" style="color:#FF8000; text-decoration:none; font-weight:bold;">
-                ← Retour
-            </a>
-            <span style="font-weight:bold; color:#FF8000;">
-                💰 {{ utilisateur.solde }} FCFA
-            </span>
-        </div>
-        <h1 style="margin-bottom:0;">💸 Demander un retrait</h1>
+    <div style="margin-bottom:16px;">
+        <div class="page-title">💸 Retrait Mobile Money</div>
+        <div style="font-size:13px; color:var(--text-3); margin-top:3px;">Reçois tes gains en 24 heures</div>
     </div>
 
-    <!-- Formulaire -->
-    <div class="card" style="margin-bottom:15px;">
-
-        {% if erreur %}
-        <div class="erreur">{{ erreur }}</div>
-        {% endif %}
-
-        {% if utilisateur.solde < 500 %}
-        <!-- Solde insuffisant : on bloque le formulaire -->
-        <div style="background:#fff3cd; color:#856404; padding:12px; border-radius:8px; margin-bottom:15px; font-size:14px;">
-            ⚠️ Il te faut au moins 500 FCFA pour retirer. Il te manque {{ 500 - utilisateur.solde }} FCFA.
+    <!-- Balance Hero -->
+    <div class="retrait-hero">
+        <div class="retrait-hero-icon">💳</div>
+        <div>
+            <div class="retrait-hero-label">Solde disponible</div>
+            <div class="retrait-hero-amount">{{ utilisateur.solde }}</div>
+            <div class="retrait-hero-currency">FCFA</div>
         </div>
+    </div>
 
-        {% else %}
-        <!-- Formulaire de retrait -->
-        <form method="POST" action="/retrait">
+    {% if erreur %}
+    <div class="alert alert-error">
+        <span class="alert-icon">⚠️</span>
+        {{ erreur }}
+    </div>
+    {% endif %}
 
-            <!-- Opérateur Mobile Money -->
-            <label style="font-size:13px; color:#666; display:block; margin-bottom:6px;">
-                Opérateur Mobile Money
-            </label>
-            <select name="operateur" required style="
-                width:100%; padding:12px; margin-bottom:15px;
-                border:1px solid #ddd; border-radius:8px;
-                font-size:16px; background:white; color:#333;
-            ">
-                <option value="" disabled selected>Choisir un opérateur</option>
-                {% for op in operateurs %}
-                <option value="{{ op }}">{{ op }}</option>
-                {% endfor %}
-            </select>
+    {% if utilisateur.solde < 500 %}
+    <!-- Insufficient balance -->
+    <div class="card">
+        <div class="empty-state">
+            <span class="empty-icon">⏳</span>
+            <div class="empty-title">Solde insuffisant</div>
+            <div class="empty-desc">
+                Il te manque <strong style="color:var(--primary)">{{ 500 - utilisateur.solde }} FCFA</strong> pour pouvoir retirer.<br>
+                Continue à compléter des offres !
+            </div>
+            <div style="margin-top:16px; background:var(--bg); border-radius:var(--radius-sm); padding:12px;">
+                <div style="height:8px; background:var(--border); border-radius:99px; overflow:hidden; margin-bottom:8px;">
+                    <div style="height:100%; width:{{ [(utilisateur.solde / 500 * 100), 100]|min }}%; background:var(--primary); border-radius:99px;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-3); font-weight:600;">
+                    <span>{{ utilisateur.solde }} FCFA</span>
+                    <span>500 FCFA</span>
+                </div>
+            </div>
+            <a href="/offres" class="btn" style="margin-top:16px;">📺 Voir les offres</a>
+        </div>
+    </div>
 
-            <!-- Numéro de téléphone -->
-            <label style="font-size:13px; color:#666; display:block; margin-bottom:6px;">
-                Numéro Mobile Money
-            </label>
-            <input
-                type="tel"
-                name="numero_telephone"
-                placeholder="Ex: 70123456"
-                required
-                pattern="[0-9]{8,}"
-                title="8 chiffres minimum"
-            >
+    {% else %}
 
-            <!-- Montant -->
-            <label style="font-size:13px; color:#666; display:block; margin-bottom:6px;">
-                Montant à retirer (FCFA)
-            </label>
-            <!--
-                On propose des boutons rapides pour les montants courants.
-                Un clic remplit automatiquement le champ montant.
-            -->
-            <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
-                {% set montants_rapides = [500, 1000, 2000, 5000] %}
-                {% for m in montants_rapides %}
-                {% if utilisateur.solde >= m %}
-                <button type="button"
-                    onclick="document.getElementById('montant').value={{ m }}"
-                    style="
-                        padding:6px 14px; border:1px solid #FF8000;
-                        border-radius:6px; background:white; color:#FF8000;
-                        font-size:13px; cursor:pointer;
-                    "
-                >{{ m }}</button>
-                {% endif %}
-                {% endfor %}
-                <!-- Bouton "Tout retirer" -->
-                <button type="button"
-                    onclick="document.getElementById('montant').value={{ utilisateur.solde }}"
-                    style="
-                        padding:6px 14px; border:1px solid #FF8000;
-                        border-radius:6px; background:#FF8000; color:white;
-                        font-size:13px; cursor:pointer;
-                    "
-                >Tout ({{ utilisateur.solde }})</button>
+    <!-- Info box -->
+    <div class="info-box">
+        <div class="info-box-icon">ℹ️</div>
+        <div class="info-box-text">Traitement sous <strong>24 à 48 heures</strong>. Une seule demande à la fois.</div>
+    </div>
+
+    <!-- Form -->
+    <div class="card" style="margin-bottom:12px;">
+        <div style="font-size:15px; font-weight:700; color:var(--text-1); margin-bottom:16px;">Nouvelle demande</div>
+
+        <form method="POST" action="/retrait" id="retrait-form">
+
+            <!-- Operator selection -->
+            <div style="margin-bottom:16px;">
+                <div class="form-label">Opérateur Mobile Money</div>
+                <div class="operator-grid">
+                    {% for op in operateurs %}
+                    <div class="operator-btn {% if loop.first %}selected{% endif %}"
+                         onclick="selectOperator(this, '{{ op }}')"
+                         data-op="{{ op }}">
+                        <div class="operator-emoji">
+                            {% if 'Orange' in op %}🟠
+                            {% elif 'Moov' in op %}🔵
+                            {% elif 'Airtel' in op %}🔴
+                            {% else %}📱{% endif %}
+                        </div>
+                        <div class="operator-name">{{ op }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="operateur" id="operateur-hidden" value="{{ operateurs[0] }}" required>
             </div>
 
-            <input
-                type="number"
-                id="montant"
-                name="montant"
-                placeholder="Montant en FCFA"
-                min="500"
-                max="{{ utilisateur.solde }}"
-                required
-            >
-
-            <div style="font-size:12px; color:#aaa; margin-top:-10px; margin-bottom:15px;">
-                Min : 500 FCFA — Max : {{ utilisateur.solde }} FCFA
+            <!-- Phone number -->
+            <div class="form-group">
+                <label class="form-label">Numéro Mobile Money</label>
+                <div style="position:relative;">
+                    <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:16px;">📱</span>
+                    <input
+                        type="tel"
+                        name="numero_telephone"
+                        class="form-control"
+                        style="padding-left:42px;"
+                        placeholder="Ex: 07 12 34 56 78"
+                        required
+                        pattern="[0-9]{8,}"
+                        title="8 chiffres minimum"
+                    >
+                </div>
             </div>
 
-            <button type="submit" class="btn">Envoyer la demande</button>
+            <!-- Quick amount buttons -->
+            <div class="form-group">
+                <label class="form-label">Montant (FCFA)</label>
+                <div class="amount-grid">
+                    {% for m in [500, 1000, 2000, 5000] %}
+                    {% if utilisateur.solde >= m %}
+                    <button type="button" class="amount-btn" onclick="setAmount({{ m }}, this)">{{ m }}</button>
+                    {% else %}
+                    <button type="button" class="amount-btn" disabled>{{ m }}</button>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <button type="button" class="amount-btn" style="width:100%; margin-bottom:10px;" onclick="setAmount({{ utilisateur.solde }}, this)">
+                    Tout retirer — {{ utilisateur.solde }} FCFA
+                </button>
+                <input
+                    type="number"
+                    id="montant"
+                    name="montant"
+                    class="form-control"
+                    placeholder="Ou saisir un montant..."
+                    min="500"
+                    max="{{ utilisateur.solde }}"
+                    required
+                    oninput="clearAmountBtns()"
+                >
+                <div style="font-size:11px; color:var(--text-3); margin-top:6px; font-weight:600;">
+                    Min : 500 FCFA &nbsp;·&nbsp; Max : {{ utilisateur.solde }} FCFA
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success" style="margin-top:4px;">
+                💸 Envoyer la demande
+            </button>
         </form>
-        {% endif %}
-
     </div>
+    {% endif %}
 
-    <!-- Historique des retraits -->
+    <!-- Withdrawal history -->
     {% if retraits %}
     <div class="card">
-        <h1 style="font-size:17px; margin-bottom:15px;">Mes demandes de retrait</h1>
+        <div style="font-size:15px; font-weight:700; color:var(--text-1); margin-bottom:14px;">
+            Mes demandes de retrait
+        </div>
 
         {% for r in retraits %}
-        <div style="
-            display:flex; justify-content:space-between; align-items:center;
-            padding:12px 0; border-bottom:1px solid #f0f0f0;
-        ">
+        <div class="retrait-hist-item">
             <div>
-                <div style="font-weight:bold; font-size:14px; color:#333;">
-                    {{ r.operateur }} — {{ r.numero_telephone }}
-                </div>
-                <div style="font-size:11px; color:#aaa; margin-top:2px;">
-                    {{ r.created_at[:10] if r.created_at else "—" }}
-                </div>
+                <div class="hist-op">{{ r.operateur }}</div>
+                <div class="hist-num">📱 {{ r.numero_telephone }}</div>
+                <div class="hist-date" style="margin-top:4px;">{{ r.created_at[:10] if r.created_at else '—' }}</div>
             </div>
-
-            <div style="text-align:right;">
-                <div style="font-weight:bold; font-size:15px; color:#333;">
-                    {{ r.montant_fcfa }} FCFA
-                </div>
-                <!-- Badge de statut coloré -->
-                <div style="
-                    font-size:11px; font-weight:bold; margin-top:3px;
-                    padding:2px 8px; border-radius:10px; display:inline-block;
-                    {% if r.statut == 'validé' %}
-                        background:#d4edda; color:#155724;
-                    {% elif r.statut == 'refusé' %}
-                        background:#f8d7da; color:#721c24;
-                    {% else %}
-                        background:#fff3cd; color:#856404;
-                    {% endif %}
-                ">
-                    {% if r.statut == 'validé' %}✅ Validé
-                    {% elif r.statut == 'refusé' %}❌ Refusé
-                    {% else %}⏳ En attente
-                    {% endif %}
-                </div>
+            <div class="hist-right">
+                <div class="hist-amount">{{ r.montant_fcfa }} FCFA</div>
+                {% if r.statut == 'validé' %}
+                <span class="badge badge-success">✅ Validé</span>
+                {% elif r.statut == 'refusé' %}
+                <span class="badge badge-error">❌ Refusé</span>
+                {% else %}
+                <span class="badge badge-warning">⏳ En attente</span>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
-
     </div>
     {% endif %}
 
 </div>
+
+<script>
+    function selectOperator(el, op) {
+        document.querySelectorAll('.operator-btn').forEach(b => b.classList.remove('selected'));
+        el.classList.add('selected');
+        document.getElementById('operateur-hidden').value = op;
+    }
+
+    function setAmount(val, btn) {
+        document.getElementById('montant').value = val;
+        document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+    }
+
+    function clearAmountBtns() {
+        document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+    }
+</script>
 {% endblock %}
