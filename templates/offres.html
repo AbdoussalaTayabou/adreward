@@ -104,9 +104,7 @@
 {% endblock %}
 
 {% block contenu %}
-<div style="margin: 0 -16px; padding: 0 16px; position: relative;">
-
-    <!-- Header -->
+<div style="margin: 0 -16px; padding: 0 16px;">
     <div class="offers-header">
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
@@ -118,44 +116,96 @@
             💰 {{ utilisateur.solde }} FCFA
         </div>
     </div>
-
     <div class="offers-tip">
         ⚡ Tes gains sont crédités automatiquement dès la fin de chaque offre.
     </div>
+</div>
 
+<!-- Onglets fournisseurs -->
+<div style="display:flex; gap:8px; padding:0 0 12px 0; overflow-x:auto;">
+    <button class="provider-tab active" onclick="showProvider('cpx', this)">
+        📺 CPX Research
+    </button>
+    <button class="provider-tab" onclick="showProvider('timewall', this)">
+        ⚡ TimeWall
+    </button>
 </div>
 
 <div class="container">
-    <div class="iframe-container">
-        <!-- Loading state -->
-        <div class="iframe-loading" id="iframe-loader">
+    <!-- CPX Research -->
+    <div id="provider-cpx" class="iframe-container">
+        <div class="iframe-loading" id="loader-cpx">
             <div class="spinner"></div>
             <div class="loading-text">Chargement des offres...</div>
         </div>
-
         <iframe
             src="{{ cpx_url }}"
             style="width:100%; height:78vh; border:none; display:none;"
             allow="camera; microphone"
-            id="offers-frame"
-            onload="frameLoaded()"
+            id="frame-cpx"
+            onload="frameLoaded('cpx')"
+        ></iframe>
+    </div>
+
+    <!-- TimeWall -->
+    <div id="provider-timewall" class="iframe-container" style="display:none;">
+        <div class="iframe-loading" id="loader-timewall">
+            <div class="spinner"></div>
+            <div class="loading-text">Chargement des offres TimeWall...</div>
+        </div>
+        <iframe
+            src="{{ timewall_url }}"
+            style="width:100%; height:78vh; border:none; display:none;"
+            allow="camera; microphone"
+            id="frame-timewall"
+            onload="frameLoaded('timewall')"
         ></iframe>
     </div>
 </div>
 
-<script>
-    function frameLoaded() {
-        document.getElementById('iframe-loader').style.display = 'none';
-        const frame = document.getElementById('offers-frame');
-        frame.style.display = 'block';
-    }
+<style>
+.provider-tab {
+    padding: 10px 18px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    color: var(--text-2);
+    font-family: 'Figtree', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+.provider-tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+</style>
 
-    // Fallback if iframe takes too long
-    setTimeout(() => {
-        const loader = document.getElementById('iframe-loader');
-        if (loader.style.display !== 'none') {
+<script>
+function showProvider(name, btn) {
+    // Cacher tous les providers
+    document.querySelectorAll('[id^="provider-"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.provider-tab').forEach(t => t.classList.remove('active'));
+    // Afficher le bon
+    document.getElementById('provider-' + name).style.display = 'block';
+    btn.classList.add('active');
+}
+
+function frameLoaded(name) {
+    document.getElementById('loader-' + name).style.display = 'none';
+    document.getElementById('frame-' + name).style.display = 'block';
+}
+
+setTimeout(() => {
+    ['cpx', 'timewall'].forEach(name => {
+        const loader = document.getElementById('loader-' + name);
+        if (loader && loader.style.display !== 'none') {
             loader.innerHTML = '<div style="text-align:center; padding:20px"><div style="font-size:36px; margin-bottom:12px">⚠️</div><div style="font-size:14px; color:#64748B">Les offres mettent du temps à charger.<br>Vérifie ta connexion.</div></div>';
         }
-    }, 15000);
+    });
+}, 15000);
 </script>
 {% endblock %}

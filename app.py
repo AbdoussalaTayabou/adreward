@@ -111,6 +111,8 @@ def offres():
         session.clear()
         return redirect(url_for("connexion"))
 
+    TIMEWALL_PLACEMENT_ID = os.environ.get("TIMEWALL_PLACEMENT_ID", "")
+
     cpx_url = (
         f"https://offers.cpx-research.com/index.php"
         f"?app_id={CPX_APP_ID}"
@@ -120,8 +122,15 @@ def offres():
         f"&subid_1=adreward"
     )
 
-    return render_template("offres.html", utilisateur=utilisateur, cpx_url=cpx_url)
+    timewall_url = (
+        f"https://timewall.io/serve/{TIMEWALL_PLACEMENT_ID}"
+        f"?user_id={utilisateur['id']}"
+    )
 
+    return render_template("offres.html", 
+                          utilisateur=utilisateur, 
+                          cpx_url=cpx_url,
+                          timewall_url=timewall_url)
 
 @app.route("/historique")
 def historique():
@@ -223,6 +232,49 @@ def postback_cpx():
         montant_fcfa=montant_fcfa,
         transaction_id=transaction_id,
         source="cpx"
+    )
+
+    return ("1", 200) if succes else ("Error", 500)
+
+@app.route("/postback/timewall")
+def postback_timewall():
+    user_id          = request.args.get("user_id", "")
+    transaction_id   = request.args.get("transaction_id", "")
+    currency_amount  = request.args.get("currency_amount", "0")
+    revenue          = request.args.get("revenue", "0")
+    hash_recu        = request.args.get("hash", "")
+    type_postback    = request.args.get("type", "credit")
+
+    # Vérification signature SHA256
+    TIMEWALL_SECRET = os.environ.get("TIMEWALL_SECRET", "24a996ced14694264e0ca05d3e4fc1ef")
+    import hashlib
+    hash_attendu = hashlib.sha256(
+        f"{user_id}.{revenue}.{TIMEWALL_SECRET}".encode()
+    ).hexdigest()
+
+    if hash_recu and hash_recu != hash_attendu:
+        return "Invalid hash", 403
+
+    # Gérer uniquement les crédits, ignorer hold/hold_cancelled
+    if type_postback not in ["credit", "chargeback"]:
+        return "OK", 200
+
+    try:
+        montant_fcfa = int(float(currency_amount) * TAUX_FCFA / 100)
+    except ValueError:
+        return "Invalid amount", 400
+
+    if type_postback == "chargeback":
+        montant_fcfa = -abs(montant_fcfa)
+
+    if montant_fcfa == 0:
+        return "OK", 200
+
+    succes = crediter_solde(
+        utilisateur_id=user_id,
+        montant_fcfa=montant_fcfa,
+        transaction_id=transaction_id,
+        source="timewall"
     )
 
     return ("1", 200) if succes else ("Error", 500)
